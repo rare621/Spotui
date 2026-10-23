@@ -119,7 +119,9 @@ function card(item) {
   keep(item);
   const b = el("button", "music-card");
   b.dataset.key = item.key;
-  const art = item.image ? image(item.image, "art") : el("div", "art", "♫");
+  const art = el("div", "art art-frame");
+  art.append(el("span", "art-fallback", item.title === "Downloaded" ? "↓" : item.title === "Liked Songs" ? "♡" : "♫"));
+  if (item.image) art.append(image(item.image));
   b.append(
     art,
     el("strong", "", item.title),
@@ -441,7 +443,7 @@ async function navigate(view, push = true) {
           "eyebrow",
           view === "radios"
             ? "KEEP THE DISCOVERY GOING"
-            : "ALL YOUR GOOD STUFF",
+            : "YOUR MUSIC",
         ),
         el(
           "h1",
@@ -1352,7 +1354,11 @@ function renderCollection(data) {
       el(
         "p",
         "muted",
-        "Stay close uses only your original songs and direct Spotify suggestions. Balanced favors those originals. Explore more gives newer songs greater influence. Similarity is not a genre guarantee.",
+        item.mode === "close"
+          ? "Your starting songs and their direct Spotify suggestions."
+          : item.mode === "explore"
+            ? "Newer songs guide more of what comes next."
+            : "A mix of familiar sounds and fresh discoveries.",
       ),
     );
     tuning.append(
@@ -1362,6 +1368,11 @@ function renderCollection(data) {
         "transparent-control",
       ),
     );
+    const about = el("details", "radio-about");
+    about.append(el("summary", "", "About this station"),
+      el("p", "muted", "Continuous suggestions shaped by your starting songs and Radio tuning. Your station keeps its name and remembers where you left off. Similarity is not a genre guarantee."));
+    wireDisclosure(about);
+    tuning.append(about);
     $("content").append(tuning);
     if (item.mix) {
       const anchors = el("details", "section station-details");
@@ -1663,7 +1674,7 @@ function renderLibraryItems(items, view) {
     el(
       "h2",
       "",
-      view === "radios" ? "Saved USpot stations" : "Saved collections",
+      view === "radios" ? "Saved USpot stations" : "Collections",
     ),
     button("+", view === "radios" ? radioChoice : createPlaylist, "circle"),
   );
@@ -1671,6 +1682,8 @@ function renderLibraryItems(items, view) {
   const filters = el("div", "filter-row"),
     holder = el("section", "section");
   function show(type) {
+    const utilities = $("content").querySelector(".library-utilities");
+    if (utilities) utilities.hidden = type !== "All";
     holder.replaceChildren();
     let subset = items.filter((i) => type === "All" || i.type === type);
     if ((state.librarySort || "Recent") === "Name")
@@ -1704,6 +1717,17 @@ function renderLibraryItems(items, view) {
           "chip",
         ),
       );
+  if (view !== "radios") {
+    const utilities = el("div", "library-utilities");
+    [["Listening history", "Your recent plays", "history"], ["Local files", "Music on this device", "local"]].forEach(([title, subtitle, view]) => {
+      const row = button("", () => navigate(view), "library-utility");
+      const words = el("span");
+      words.append(el("strong", "", title), el("small", "muted", subtitle));
+      row.append(el("span", "utility-icon", view === "history" ? "↶" : "♫"), words, el("span", "utility-chevron", "›"));
+      utilities.append(row);
+    });
+    $("content").append(utilities);
+  }
   $("content").append(filters, holder);
   show("All");
 }
@@ -2152,6 +2176,25 @@ async function renderSettings(generation) {
     el("span", "eyebrow", "YOUR MUSIC, YOUR WAY"),
     el("h1", "", "Settings"),
   );
+  const profile = el("div", "settings-profile");
+  profile.append(el("h2", "", data.name || "Your account"));
+  profile.append(button("USpot Premium  ›", () => {
+    const d = dialog("USpot Premium", "Included with USpot. More music. More freedom.");
+    const benefits = el("div", "premium-benefits");
+    for (const [title, detail] of [
+      ["No ads", "Enjoy your music without ad breaks."],
+      ["Unlimited skips", "Find the song that fits your moment."],
+      ["Offline downloads", "Take your favorites with you on your phone."],
+      ["Radio & Radio Mix", "Explore from the songs you love."],
+      ["And more", "Personal recommendations, listening stats, and desktop listening."]
+    ]) {
+      const row = el("div", "premium-benefit");
+      row.append(el("strong", "", "✓ " + title), el("p", "muted", detail));
+      benefits.append(row);
+    }
+    d.append(benefits, el("p", "muted", "These are USpot features. This does not change your Spotify subscription."), button("Keep listening", () => d.close(), "primary"));
+  }, "premium-badge"));
+  content.append(profile);
   function group(title) {
     const s = el("details", "settings-group");
     const summary = el("summary");
@@ -2871,3 +2914,8 @@ downloadNav.replaceChildren(
   el("span", "", "Downloads"),
 );
 document.querySelector(".sidebar nav").append(downloadNav);
+
+$("more-views").onclick = () => {
+  const menu = dialog("Your music");
+  [["Your Library", "library"], ["Downloads", "downloads"], ["Local files", "local"], ["Listening history", "history"], ["Your radios", "radios"], ["Settings", "settings"]].forEach(([label, view]) => menu.append(button(label, () => { menu.close(); navigate(view); }, "menu-action")));
+};

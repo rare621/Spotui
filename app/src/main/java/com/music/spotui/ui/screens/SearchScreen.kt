@@ -273,7 +273,7 @@ fun SumUpSearchScreen(
                 is Response.Success -> Unit
             }
             if (mixed.isEmpty() && radioMatches.isEmpty() && filteredResults.shows.isEmpty() && filteredResults.episodes.isEmpty() && searchViewModel.results.value is Response.Success) {
-                item { Text("No matches in this category.", color = com.music.spotui.ui.theme.AppSecondary, modifier = Modifier.padding(20.dp)) }
+                item { com.music.spotui.ui.components.EmptyState("No matches yet", "Try another song, artist, or playlist name, or choose a different filter.") }
             }
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {

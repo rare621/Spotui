@@ -134,6 +134,8 @@ class HomeViewModel @Inject constructor(private val repository: AppRepository)  
         }
     }
 
+    private var homeLoadJob: kotlinx.coroutines.Job? = null
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             // Restore discovery before exposing the base feed, without blocking ViewModel creation.
@@ -159,9 +161,18 @@ class HomeViewModel @Inject constructor(private val repository: AppRepository)  
         fetchAlbums()
     }
 
-    private fun fetchHome() = viewModelScope.launch(Dispatchers.IO) {
-        repository.provideHomeFeed().collect { feed ->
-            _home.value = feed
+    fun retryHome() {
+        if (_home.value is Response.Loading) return
+        _home.value = Response.Loading()
+        fetchHome()
+    }
+
+    private fun fetchHome() {
+        homeLoadJob?.cancel()
+        homeLoadJob = viewModelScope.launch(Dispatchers.IO) {
+            repository.provideHomeFeed().collect { feed ->
+                _home.value = feed
+            }
         }
     }
 

@@ -136,6 +136,12 @@ const text=id=>w.document.getElementById(id).textContent;
  assert.ok(w.__state.recoveryTimer);assert.match(text('artist'),/retrying in 10 seconds/);
  w.document.getElementById('audio').dispatchEvent(new w.Event('pause'));
  clearTimeout(w.__state.recoveryTimer);
+ // Compact utility destinations and the secondary menu remain real navigation.
+ await w.__navigate('library');await tick();
+ assert.equal(w.document.querySelectorAll('.library-utility').length,2);
+ w.document.querySelectorAll('.library-utility')[0].click();await tick();assert.equal(w.__state.view,'history');
+ w.document.getElementById('more-views').click();await tick();
+ [...w.document.querySelectorAll('#action-dialog button')].find(b=>b.textContent==='Local files').click();await tick();assert.equal(w.__state.view,'local');
  // Preview organization changes reach the shared phone backend.
  await w.__navigate('library');await tick();
  w.__collectionMenu(playlist);[...w.document.querySelectorAll('#action-dialog button')].find(b=>b.textContent==='Pin to library').click();await tick();await tick();
@@ -147,6 +153,7 @@ const text=id=>w.document.getElementById(id).textContent;
  w.document.getElementById('search').value='Song';await w.__search();await tick();assert.match(text('content'),/TOP RESULT/);
  [...w.document.querySelectorAll('#content .chip')].find(b=>b.textContent==='USpot Radios').click();await tick();assert.equal(w.document.querySelectorAll('#content .track-row').length,0);assert.match(text('content'),/Song 0 Radio/);
  await w.__navigate('settings');assert.ok(w.document.querySelectorAll('details.settings-group').length>3);
+ assert.match(text('content'),/Test account/);click('.premium-badge');await tick();assert.match(text('action-dialog'),/Unlimited skips/);assert.match(text('action-dialog'),/does not change your Spotify subscription/);[...w.document.querySelectorAll('#action-dialog button')].find(b=>b.textContent==='Keep listening').click();await tick();assert.equal(w.document.getElementById('action-dialog').open,false);
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS: navigation, collection retry, queue next/previous, smart-shuffle cycle, radio modes without restart, manual FIFO queue, confirmed likes and mutation errors, settings and no-code connection, shuffle restoration, add-next, 30-second history qualification, search playback, radio creation, theme switching, no-restart radio adoption, exhausted-radio refill, and failed-lookup recovery (simulated phone/audio).');
  dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

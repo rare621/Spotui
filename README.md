@@ -37,7 +37,7 @@ Next time there's an update, USpot can let you know. Choose **Install** or **Can
 
 ## 💚 A fresh feel, wherever you listen
 
-Move through your music with cleaner pages, smoother transitions and a refreshed player. Pin favorite collections in Library, manage downloads and retry unfinished ones, and find what you want faster with grouped search results. The computer interface gets the same attention, too.
+Enjoy a cleaner Library, tidier Radio pages and a refreshed Connect menu for your phone, speakers and headphones. Tap **USpot Premium** beneath your name in Settings to see the perks included with USpot. Pin favorite collections in Library, manage downloads and retry unfinished ones, and find what you want faster with grouped search results. The computer interface gets the same attention, too.
 
 ## ✨ Make yourself at home
 

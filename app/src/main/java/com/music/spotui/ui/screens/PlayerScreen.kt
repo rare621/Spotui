@@ -567,7 +567,7 @@ fun PlayerInfo(
                     modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
                     text = songTitle,
                     color = com.music.spotui.ui.theme.PlayerText,
-                    fontSize = 19.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     softWrap = false,
@@ -575,7 +575,7 @@ fun PlayerInfo(
                 Text(
                     text = songSinger,
                     color = com.music.spotui.ui.theme.PlayerSecondary,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -863,7 +863,7 @@ fun PlayerFull(
         }
         Icon(
             modifier = Modifier
-                .size(35.dp)
+                .size(48.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -871,7 +871,7 @@ fun PlayerFull(
                     // The queue itself is already in shuffled order when shuffle
                     // is on (reordered once at toggle) — never re-shuffle per tap.
                     playerViewModel.playPreviousSong(queueSongs, context)
-                }
+                }.padding(7.dp)
             ,
             tint = com.music.spotui.ui.theme.PlayerText,
             painter = painterResource(id = R.drawable.ic_player_back),
@@ -923,21 +923,22 @@ fun PlayerFull(
 
         Icon(
             modifier = Modifier
-                .size(35.dp)
+                .size(48.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {
 
                     playerViewModel.playNextSongs(queueSongs, context)
-                }
+                }.padding(7.dp)
             ,
             tint = com.music.spotui.ui.theme.PlayerText,
             painter = painterResource(id = R.drawable.ic_player_skip),
             contentDescription = "player skip")
         Icon(
             modifier = Modifier
-                .size(20.dp)
+                .size(48.dp)
+                .padding(12.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -973,7 +974,7 @@ fun PlayerConnectRow(
     val selected = outputs.firstOrNull { it.selected }
     val routeName = selected?.name ?: "Phone speaker"
     var showOutputs by remember { mutableStateOf(false) }
-    if (showOutputs) com.music.spotui.ui.components.AudioOutputSheet(audioOutputs, outputs) { showOutputs = false }
+    if (showOutputs) com.music.spotui.ui.components.AudioOutputSheet(audioOutputs, outputs, currentTrack?.title.orEmpty(), currentTrack?.singer.orEmpty()) { showOutputs = false }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1372,9 +1373,9 @@ fun PlayerMenuRow(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp).clip(RoundedCornerShape(14.dp)).background(com.music.spotui.ui.theme.AppRaised.copy(alpha = 0.5f))
+            .fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp).clip(RoundedCornerShape(14.dp))
             .motionClick(enabled = enabled) { onClick() }
-            .padding(horizontal = 20.dp, vertical = 14.dp)
+            .padding(horizontal = 20.dp, vertical = 13.dp)
     ) {
         if (icon != null) {
         Icon(

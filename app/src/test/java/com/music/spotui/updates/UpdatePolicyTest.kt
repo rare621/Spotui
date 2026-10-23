@@ -27,6 +27,13 @@ class UpdatePolicyTest {
     @Test fun oversizedAssetIsRejected() { val r=release();r.getJSONArray("assets").getJSONObject(0).put("size",UpdatePolicy.MAX_APK_BYTES+1);rejected(r) }
     @Test fun unknownTagCannotMasqueradeAsCurrent() { rejected(release().put("tag_name","latest")) }
     @Test fun samePackageAndSignerWithHigherCodeCanUpdate() { assertTrue(UpdatePolicy.compatible("app","app",75,76,76,setOf("key"),setOf("key"))) }
+    @Test fun skippedVersionsCanJumpDirectlyToLatestRelease() {
+        val latest = UpdatePolicy.parse(release(84).toString())!!
+        for (installed in listOf(73L, 80L, 81L, 82L)) {
+            assertTrue("Build $installed should update directly to ${latest.code}",
+                UpdatePolicy.compatible("app", "app", installed, latest.code, latest.code, setOf("key"), setOf("key")))
+        }
+    }
     @Test fun differentPackageOrKeyIsRejected() { assertFalse(UpdatePolicy.compatible("app","preview",75,76,76,setOf("key"),setOf("key")));assertFalse(UpdatePolicy.compatible("app","app",75,76,76,setOf("key"),setOf("other"))) }
     @Test fun oldOrMislabeledApkIsRejected() { assertFalse(UpdatePolicy.compatible("app","app",75,75,75,setOf("key"),setOf("key")));assertFalse(UpdatePolicy.compatible("app","app",75,76,77,setOf("key"),setOf("key"))) }
     @Test fun missingCertificatesNeverPass() { assertFalse(UpdatePolicy.compatible("app","app",75,76,76,emptySet(),emptySet())) }

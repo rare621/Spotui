@@ -81,7 +81,7 @@ fun PlaylistScreen(navController: NavController, playlistId: String, playlistNam
     val canEdit by playlistViewModel.canEdit.collectAsState()
     var editing by remember(playlistId) { mutableStateOf(false) }
     var removeFromPlaylist by remember(playlistId) { mutableStateOf<com.music.spotui.data.entity.SongsModel?>(null) }
-    if (editing) com.music.spotui.ui.components.PlaylistEditorSheet(playlistId, playlistName, navController, initialRemove = removeFromPlaylist,
+    if (editing && canEdit) com.music.spotui.ui.components.PlaylistEditorSheet(playlistId, playlistName, navController, initialRemove = removeFromPlaylist,
         onChanged = { playlistViewModel.refreshPlaylist(playlistId) }, onDismiss = { editing = false; removeFromPlaylist = null; playlistViewModel.refreshPlaylist(playlistId) })
     val context = LocalContext.current
 
@@ -242,7 +242,7 @@ fun PlaylistScreen(navController: NavController, playlistId: String, playlistNam
                                 .heightIn(min = 56.dp)
                                 .padding(20.dp, 0.dp)
                         ) {
-                            androidx.compose.material3.TextButton(onClick = { editing = true }) { Text("Edit", color = com.music.spotui.ui.theme.AppText) }
+                            if (canEdit) androidx.compose.material3.TextButton(onClick = { editing = true }) { Text("Edit", color = com.music.spotui.ui.theme.AppText) }
                             Spacer(Modifier.weight(1f))
                             // Download the whole playlist (all tracks) for offline playback.
                             var askDownloadAll by remember { mutableStateOf(false) }

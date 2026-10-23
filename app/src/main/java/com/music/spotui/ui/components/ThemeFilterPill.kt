@@ -24,9 +24,12 @@ fun ThemeFilterPill(label: String, selected: Boolean = false, onClick: () -> Uni
     val textColor by androidx.compose.animation.animateColorAsState(if(selected)Color.Black else AppText, androidx.compose.animation.core.tween(180), label="Tab text")
     androidx.compose.foundation.layout.Box(
         modifier=Modifier.heightIn(min=48.dp).semantics {this.selected=selected}
-            .clip(RoundedCornerShape(24.dp)).background(pillColor)
-            .clickable(indication=null,interactionSource=androidx.compose.runtime.remember{androidx.compose.foundation.interaction.MutableInteractionSource()},role=androidx.compose.ui.semantics.Role.Tab,onClick=onClick)
-            .padding(horizontal=16.dp,vertical=10.dp),
+            .clickable(indication=null,interactionSource=androidx.compose.runtime.remember{androidx.compose.foundation.interaction.MutableInteractionSource()},role=androidx.compose.ui.semantics.Role.Tab,onClick=onClick),
         contentAlignment=androidx.compose.ui.Alignment.Center
-    ) { Text(label,color=textColor,fontWeight=FontWeight.Bold,fontSize=14.sp) }
+    ) {
+        androidx.compose.foundation.layout.Box(
+            Modifier.clip(RoundedCornerShape(22.dp)).background(pillColor).padding(horizontal=14.dp,vertical=8.dp),
+            contentAlignment=androidx.compose.ui.Alignment.Center
+        ) { Text(label,color=textColor,fontWeight=FontWeight.SemiBold,fontSize=14.sp) }
+    }
 }

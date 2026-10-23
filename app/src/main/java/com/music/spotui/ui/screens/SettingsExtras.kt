@@ -31,8 +31,9 @@ internal fun SettingsProfileHeader() {
     Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         GlideImage(model = profile?.imageUrl.orEmpty(), contentDescription = "Spotify profile", contentScale = ContentScale.Crop,
             modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.DarkGray))
-        Column(Modifier.padding(start = 16.dp)) {
+        Column(Modifier.weight(1f).padding(start = 16.dp)) {
             Text(profile?.name?.ifBlank { "Spotify account" } ?: "Spotify account", color = com.music.spotui.ui.theme.AppText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            com.music.spotui.ui.components.UspotPremiumBadge()
             profile?.email?.takeIf { it.isNotBlank() }?.let { Text(it, color = com.music.spotui.ui.theme.AppSecondary) }
             profile?.plan?.takeIf { it.isNotBlank() }?.let { Text("Spotify $it", color = Color(0xFF1DB954)) }
         }

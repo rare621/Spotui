@@ -274,9 +274,9 @@ private fun SongMenuRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
         modifier = Modifier
-            .fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp).clip(RoundedCornerShape(14.dp)).background(com.music.spotui.ui.theme.AppRaised.copy(alpha = 0.5f))
+            .fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp).clip(RoundedCornerShape(14.dp))
             .then(if (enabled) Modifier.motionClick { onClick() } else Modifier)
-            .padding(16.dp, 14.dp)
+            .padding(16.dp, 13.dp)
     ) {
         if (icon != null) {
         Icon(

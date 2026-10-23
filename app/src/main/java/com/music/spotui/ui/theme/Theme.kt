@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
@@ -56,20 +57,34 @@ fun SpotuiTheme(
     val polishedScheme = colorScheme.copy(primary=AppPalette,secondary=AppPalette,
         onPrimary=if(useDark)Color.Black else Color.White,
         surfaceVariant=AppRaised,onSurfaceVariant=AppSecondary,outline=AppSecondary.copy(alpha=.35f))
+    val artworkScreen = AppearanceSettings.artworkScreen.value
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = Color.Transparent.toArgb()
+            window.decorView.setBackgroundColor(AppBackground.toArgb())
+            window.statusBarColor = (if (artworkScreen) Color.Transparent else AppBackground).toArgb()
+            window.navigationBarColor = (if (artworkScreen) Color.Transparent else AppBackground).toArgb()
             // Music screens use dark/artwork backgrounds: retain readable white system icons.
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !useDark && !AppearanceSettings.artworkScreen.value
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) window.isStatusBarContrastEnforced = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !useDark && !artworkScreen
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !useDark && !artworkScreen
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
+            }
         }
     }
 
     MaterialTheme(
         colorScheme = polishedScheme,
         typography = Typography,
+        shapes = androidx.compose.material3.Shapes(
+            extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+            small = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            large = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+        ),
     ) {
         // Bare Text() uses LocalTextStyle, which MaterialTheme does NOT derive
         // from the typography — so provide Montserrat as the global default so
@@ -77,7 +92,7 @@ fun SpotuiTheme(
         androidx.compose.material3.ProvideTextStyle(
             value = androidx.compose.material3.LocalTextStyle.current.copy(
                 fontFamily = Montserrat,
-                letterSpacing = (-0.2).sp,
+                letterSpacing = (-0.1).sp,
             ),
             content = content,
         )

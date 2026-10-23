@@ -1,12 +1,11 @@
-# 💚 A fresh feel for your music · USpot build 82
+# 💚 A little more polish for your music
 
-- **Move through your music.** New transitions across pages, Home tabs, Library and Settings, with lighter player updates and revised video handling when minimizing.
-- **Keep favorites close.** Pin playlists, albums and USpot radios in Library.
-- **Find it faster.** Grouped search results, a top result, saved searches and quick Radio creation.
-- **Take control of downloads.** See progress and storage use, cancel an active download, or retry unfinished ones.
-- **A cleaner Home and player.** Less repeated artwork, clearer playback status in the existing source line, and tidier menus and controls.
-- **Enjoy it on your computer.** Matching updates to the browser interface, including menus, pages and Settings.
+- A cleaner Library and easier-to-browse Settings.
+- Tidier Radio pages with clearer tuning controls.
+- A refreshed Connect menu for choosing where to listen.
+- A new USpot Premium panel showing your included perks.
+- Matching improvements to the computer interface, plus small fixes throughout.
 
-Install **USpot.apk** over your existing USpot to keep your data. You can export a backup from Settings first. If you tried **USpot Preview**, your regular USpot and preview keep separate local data; export and import a backup if you want to bring preview history across.
+Install **USpot.apk** over your current USpot to keep your music history and settings. 🎧
 
-Thank you to [Spotui’s creators and contributors](https://github.com/Spotui/Spotui) for the app that made this possible. 🎧
+Thanks to Spotui’s creators and contributors for the foundation that makes USpot possible.

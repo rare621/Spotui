@@ -163,11 +163,7 @@ fun HomeScreen(navController: NavController){
             home is Response.Loading || baseFeed != null -> Loader()
             else -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "Couldn't load music.\nCheck your connection and try again.",
-                        color = com.music.spotui.ui.theme.AppText,
-                        textAlign = TextAlign.Center,
-                    )
+                    com.music.spotui.ui.components.RetryPanel("Check your connection and try loading your music again.") { homeViewModel.retryHome() }
                 }
             }
         }
@@ -320,8 +316,14 @@ private fun HomeHeaderRow(navController: NavController, followingSelected: Boole
             HomePill("Music", selected = !followingSelected && !statsSelected) { onSelection(false) }
             HomePill("Following", selected = followingSelected) { onSelection(true) }
             HomePill("Stats", selected = statsSelected) { onStats() }
-            HomePill("Local files") { navController.navigate(Routes.LocalFiles.route) }
-            HomePill("History") { navController.navigate(Routes.History.route) }
+            var showMore by remember { mutableStateOf(false) }
+            Box {
+                HomePill("More") { showMore = true }
+                androidx.compose.material3.DropdownMenu(expanded = showMore, onDismissRequest = { showMore = false }) {
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("Local files") }, onClick = { showMore = false; navController.navigate(Routes.LocalFiles.route) })
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("Listening history") }, onClick = { showMore = false; navController.navigate(Routes.History.route) })
+                }
+            }
         }
 
 
@@ -340,7 +342,7 @@ private fun HomeShortcutGrid(navController: NavController, items: List<HomeItem>
     val player: com.music.spotui.ui.viewmodel.PlayerViewModel = hiltViewModel()
     Column(Modifier.padding(top = 12.dp, bottom = 4.dp)) {
         Row(Modifier.fillMaxWidth().padding(start=20.dp,end=12.dp),verticalAlignment=Alignment.CenterVertically) {
-            Text("Your rotation", color = com.music.spotui.ui.theme.AppText, fontSize = 25.sp,
+            Text("Your rotation", color = com.music.spotui.ui.theme.AppText, fontSize = 22.sp,
                 fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             com.music.spotui.ui.components.RadioCreationMenu { stationId ->
                 navController.navigate("radio/"+android.net.Uri.encode(stationId))
@@ -354,7 +356,7 @@ private fun HomeShortcutGrid(navController: NavController, items: List<HomeItem>
                 Column(Modifier.width(224.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     pairs[index].forEach { item ->
                         val active = com.music.spotui.data.recommendation.PlaybackHighlightPolicy.active(item, player.activeCollection.value, player.currentSongId.value)
-                        Row(Modifier.fillMaxWidth().height(72.dp).playbackGlow(active).clip(RoundedCornerShape(14.dp))
+                        Row(Modifier.fillMaxWidth().height(72.dp).playbackGlow(active).clip(RoundedCornerShape(16.dp))
                             .background(com.music.spotui.ui.theme.AppSurface)
                             .combinedClickable(
                                 onClick = { if (item is HomeItem.Radio || item is HomeItem.RecentTrack) onLocal(item) else onHomeItemClick(navController, item) },
@@ -421,11 +423,11 @@ private fun HomeFeedCard(item: HomeItem, onRemove: () -> Unit = {}, onClick: () 
             .padding(6.dp)
             .combinedClickable(onClick = onClick, onLongClick = onRemove),
     ) {
-        Box(Modifier.size(130.dp).playbackGlow(active, if (isArtist) CircleShape else RoundedCornerShape(14.dp))) {
+        Box(Modifier.size(130.dp).playbackGlow(active, if (isArtist) CircleShape else RoundedCornerShape(16.dp))) {
         GlideImage(
             modifier = Modifier
                 .size(130.dp)
-                .clip(if (isArtist) CircleShape else RoundedCornerShape(14.dp)),
+                .clip(if (isArtist) CircleShape else RoundedCornerShape(16.dp)),
             contentScale = ContentScale.Crop,
             model = item.imageUrl,
             loading = placeholder(R.drawable.placeholder),

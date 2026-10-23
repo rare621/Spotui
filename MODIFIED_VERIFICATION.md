@@ -1,7 +1,7 @@
-# USpot build 82 validation
+# USpot build 85 verification
 
-The production package is `com.music.spotui.modified`, version 1.1, code 82. The release workflow assembles and tests Android and browser code, verifies the existing production certificate and APK v2 signature, and publishes only after all release assets are uploaded.
+Changes since build 82: Library utility layout and cover fallbacks; typography, menus, system bar theme updates and touch targets; owner-gated playlist editing; USpot Premium benefits sheet; aligned Radio tuning controls and matching browser UI; local phone route fallback and route-switch confirmation in Connect.
 
-The changes were compiled and checked in the separate preview before promotion. See [POLISH_CHANGES.md](POLISH_CHANGES.md) for implementation detail and test limitations. A local build of the production identity is required as well; automated tests and browser checks cannot establish real-device animation frame rates, streaming, Spotify-account access, Bluetooth or Android Auto behavior.
+Identity: com.music.spotui.modified, USpot 1.1, versionCode 85. The release workflow requires the existing production certificate and verifies the APK identity before publishing. The updater compares numeric build numbers and supports skipped-version upgrades. This pass changes no existing preference names, stored data formats or download paths.
 
-History, accounts and settings stay in the regular app’s existing data directory. Backup imports retain compatibility with USpot family IDs. Original integrations, licenses and notices are preserved.
+Release gate: GitHub Actions assembles the APK, runs app and Spotify-module unit tests and browser interaction checks, verifies the production signing certificate and package, then publishes the matching APK and complete source. Browser interaction and desktop/mobile visual checks passed for the shared preview source. Physical Android upgrade installation, Bluetooth/speaker switching, Android Auto and real account mutations were not exercised in this environment. Route availability and switching depend on Android and the device manufacturer.

@@ -37,8 +37,14 @@ fun LoadingRows(count: Int = 5) {
 
 @Composable
 fun RetryPanel(title: String, onRetry: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(title, color = AppSecondary)
-        OutlinedButton(onClick = onRetry) { Text("Try again", color = AppPalette) }
+    EmptyState("Couldn’t load this", title, "Try again", onRetry)
+}
+
+@Composable
+fun EmptyState(title: String, message: String, action: String? = null, onAction: () -> Unit = {}) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, color = AppText, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = AppSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        if (action != null) TextButton(onClick = onAction) { Text(action, color = AppPalette) }
     }
 }
