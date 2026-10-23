@@ -410,6 +410,16 @@ object SongPlayer {
     private fun soulseekOn(ctx: Context): Boolean =
         soulseekEnabled && com.music.spotui.data.preferences.isSoulseekEnabled(ctx)
 
+    /** Snapshot the current and prepared local tracks without touching the player from an IO thread. */
+    internal fun protectedLosslessCacheKeys(): Set<String> {
+        val current = currentRequest
+        val queue = boundState?.queue?.value.orEmpty()
+        val index = queue.indexOfFirst { it.url == current }
+        val next = if (index >= 0) queue.getOrNull(index + 1)?.url else null
+        return listOfNotNull(current.takeIf { it.isNotBlank() }, preloadedNext, pendingNextSong?.url, next)
+            .map(::soulseekKey).toSet()
+    }
+
     private fun soulseekKey(song: String): String =
         trackIdRegistry[song] ?: spotifyTrackIdForPlayback(song) ?: song.hashCode().toUInt().toString()
 
@@ -646,7 +656,7 @@ object SongPlayer {
         mediaCache ?: synchronized(this) {
             mediaCache ?: androidx.media3.datasource.cache.SimpleCache(
                 java.io.File(context.cacheDir, "media"),
-                androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(256L * 1024 * 1024),
+                androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(com.music.spotui.cache.CacheBudget.AUDIO_BYTES),
                 androidx.media3.database.StandaloneDatabaseProvider(context),
             ).also { mediaCache = it }
         }
@@ -761,7 +771,10 @@ object SongPlayer {
         }
         streamCache[song]?.let { cachedUrl ->
             val age = android.os.SystemClock.elapsedRealtime() - (streamCachedAt[song] ?: 0L)
-            if (age > 15 * 60_000L || age < 0L) {
+            val localMissing = cachedUrl.startsWith("file:") && runCatching {
+                !java.io.File(android.net.Uri.parse(cachedUrl).path.orEmpty()).isFile
+            }.getOrDefault(true)
+            if (localMissing || age > 15 * 60_000L || age < 0L) {
                 invalidateResolvedStream(song)
             } else {
             // Source choices take effect immediately; never let a URL cached under the

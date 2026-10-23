@@ -14,14 +14,23 @@ import java.io.File
  */
 object SoulseekSource {
     private const val TAG = "SoulseekSource"
-    private const val CACHE_LIMIT_BYTES = 1L shl 30 // 1 GB of cached FLACs
+    private const val CACHE_LIMIT_BYTES = com.music.spotui.cache.CacheBudget.LOSSLESS_BYTES
+    private val transferLock = java.util.concurrent.locks.ReentrantLock()
 
     /** Already-fetched FLAC for the track, or null. Cheap: no network. */
     fun cached(context: Context, cacheKey: String): File? =
         File(File(context.cacheDir, "slsk"), "$cacheKey.flac").takeIf { it.length() > 0 }
+            ?.also { it.setLastModified(System.currentTimeMillis()) }
 
     /** Cached or freshly fetched FLAC for the track, or null. Blocking: IO only. */
     fun flac(context: Context, cacheKey: String, title: String, artist: String, durationSec: Int): File? {
+        cached(context, cacheKey)?.let { return it }
+        if (!transferLock.tryLock()) return null
+        try { return fetchFlac(context, cacheKey, title, artist, durationSec) }
+        finally { transferLock.unlock() }
+    }
+
+    private fun fetchFlac(context: Context, cacheKey: String, title: String, artist: String, durationSec: Int): File? {
         val dir = File(context.cacheDir, "slsk").apply { mkdirs() }
         val file = File(dir, "$cacheKey.flac")
         if (file.length() > 0) return file.also { it.setLastModified(System.currentTimeMillis()) }
@@ -38,16 +47,20 @@ object SoulseekSource {
         // so try the next ones instead of giving up on the first "no".
         val part = File(dir, "$cacheKey.flacpart")
         val deadline = System.currentTimeMillis() + 150_000
-        for (c in candidates.distinctBy { it.username }.take(4)) {
+        for (c in candidates.filter { it.size in 1..CACHE_LIMIT_BYTES }.distinctBy { it.username }.take(4)) {
             val left = deadline - System.currentTimeMillis()
             if (left < 10_000) break
-            val fetched = SoulseekClient.download(c, part, timeoutMs = minOf(90_000, left))
+            part.delete()
+            val used = trimCache(dir, (CACHE_LIMIT_BYTES - c.size).coerceAtLeast(0), setOf(file.name))
+            val available = CACHE_LIMIT_BYTES - used
+            if (c.size > available) continue // Never evict a playing/prepared file just to cache another.
+            val fetched = SoulseekClient.download(c, part, timeoutMs = minOf(90_000, left), maxBytes = available)
             when {
                 !fetched -> Log.d(TAG, "fetch from ${c.username} failed: ${SoulseekClient.lastError ?: "timed out"}")
                 !isRightTrack(part, durationSec) -> Log.d(TAG, "${c.username}: not the expected FLAC, skipped")
                 part.renameTo(file) -> {
                     Log.d(TAG, "FLAC from ${c.username}: ${c.displayName}")
-                    trimCache(dir)
+                    trimCache(dir, CACHE_LIMIT_BYTES, setOf(file.name))
                     return file
                 }
             }
@@ -128,14 +141,19 @@ object SoulseekSource {
         return LosslessSource.flacDurationSec(head.copyOfRange(start, start + 42))
     }
 
-    /** Keep the cache under its limit, dropping the least recently used files. */
-    private fun trimCache(dir: File) {
-        val files = dir.listFiles { f -> f.extension == "flac" }?.sortedBy { it.lastModified() } ?: return
-        var total = files.sumOf { it.length() }
-        for (f in files) {
-            if (total <= CACHE_LIMIT_BYTES) break
-            total -= f.length()
-            f.delete()
-        }
+    /** May run at startup or periodically, but never concurrently with a cache transfer. */
+    fun pruneCache(context: Context) {
+        if (!transferLock.tryLock()) return
+        try {
+            val dir = File(context.cacheDir, "slsk")
+            trimCache(dir, CACHE_LIMIT_BYTES)
+            dir.listFiles().orEmpty().filter { it.extension == "flacpart" && it.canonicalFile.parentFile == dir.canonicalFile }
+                .forEach { it.delete() }
+        } finally { transferLock.unlock() }
+    }
+
+    private fun trimCache(dir: File, limit: Long, extra: Set<String> = emptySet()): Long {
+        val protected = com.music.spotui.di.SongPlayer.protectedLosslessCacheKeys().map { "$it.flac" }.toSet() + extra
+        return com.music.spotui.cache.CacheBudget.trimLossless(dir, limit, protected, System.currentTimeMillis() - 120_000L)
     }
 }

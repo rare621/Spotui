@@ -31,6 +31,7 @@
         android:supportsRtl="true"
         android:theme="@style/splashScreenTheme"
         tools:targetApi="31">
+        <meta-data android:name="com.music.spotui.cache.UspotGlideModule" android:value="GlideModule" />
         <provider android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.updates" android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_file_paths" />

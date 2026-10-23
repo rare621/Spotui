@@ -437,6 +437,8 @@ internal class WebUiBackend(private val context: Context) {
                 .put("smartWifi", SmartDownloads.wifiOnly(context)).put("personalization", HomePersonalization.enabled(context))
                 .put("strength", HomePersonalization.strength(context)).put("name", com.music.spotui.data.api.ProfileCache.name)
                 .put("version", com.music.spotui.BuildConfig.VERSION_NAME).put("build", com.music.spotui.BuildConfig.VERSION_CODE)
+                .put("managedCacheLimitBytes", com.music.spotui.cache.CacheBudget.TOTAL_BYTES)
+                .put("managedCacheBytes", com.music.spotui.cache.CacheStorage.usage(context).total)
         }
         else -> error("Unknown action")
     }

@@ -92,6 +92,7 @@ object SoulseekClient {
         val filename: String,
         @Volatile var transferToken: Int = 0,
         @Volatile var expectedSize: Long = 0,
+        val maxBytes: Long = Long.MAX_VALUE,
         val events: LinkedBlockingQueue<String> = LinkedBlockingQueue(),
         @Volatile var outFile: File? = null,
         @Volatile var done: Boolean = false,
@@ -179,10 +180,12 @@ object SoulseekClient {
         outFile: File,
         timeoutMs: Long = 120_000,
         onProgress: ((Long, Long) -> Unit)? = null,
+        maxBytes: Long = Long.MAX_VALUE,
     ): Boolean {
+        if (maxBytes <= 0 || file.size > maxBytes) { lastError = "cache limit"; return false }
         if (!loggedIn) { lastError = "not logged in"; return false }
         lastError = null
-        val state = DownloadState(file.username, file.filename, expectedSize = file.size, outFile = outFile)
+        val state = DownloadState(file.username, file.filename, expectedSize = file.size, outFile = outFile, maxBytes = maxBytes)
         state.onProgress = onProgress
         activeDownload = state
         try {
@@ -211,6 +214,7 @@ object SoulseekClient {
             Log.e(TAG, "download failed", e)
             return false
         } finally {
+            state.done = true
             if (activeDownload === state) activeDownload = null
         }
     }
@@ -512,9 +516,10 @@ object SoulseekClient {
             var lastNotified = 0L
             BufferedOutputStream(outFile.outputStream()).use { fileOut ->
                 val buf = ByteArray(64 * 1024)
-                while (expected <= 0 || received < expected) {
+                while (!dl.done && (expected <= 0 || received < expected)) {
                     val n = input.read(buf)
                     if (n < 0) break
+                    if (dl.done || n.toLong() > dl.maxBytes - received) throw java.io.IOException("Cache transfer cancelled or limit reached")
                     fileOut.write(buf, 0, n)
                     received += n
                     // Throttle progress callbacks to ~every 256 KB.

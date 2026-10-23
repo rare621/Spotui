@@ -55,6 +55,7 @@ Enjoy a cleaner Library, tidier Radio pages and a refreshed Connect menu for you
 - **🎚️ Your sound.** Equalizer presets and manual controls, plus a device menu for connected speakers and headphones.
 - **🌗 Your look.** Light, dark, or follow your phone's theme.
 - **🚘 On the road.** Browse your music and recent radios with Android Auto.
+- **🧹 Keep storage tidy.** Temporary music and artwork use a 256 MB managed cache budget, with automatic cleanup and a Storage page. Your listening data stays separate.
 - **💾 Keep your memories.** Export and import your local data from Settings.
 
 ## 🖥️ Listen at your desk

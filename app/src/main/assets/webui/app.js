@@ -2205,6 +2205,11 @@ async function renderSettings(generation) {
     content.append(s);
     return s;
   }
+  const storage = group("Storage");
+  storage.append(el("p", "", "Temporary music & artwork limit: 256 MB"));
+  if (Number.isFinite(data.managedCacheBytes)) storage.append(el("p", "muted", `${Math.round(data.managedCacheBytes / 1048576)} MB cached on your phone.`));
+  storage.append(el("p", "muted", "Older cached files are removed automatically. Your listening history, stats, Radio progress, Home personalization, sign-ins and downloaded music are kept separately."));
+  storage.append(el("p", "muted", "Files in use are protected. Android, web sign-in and update downloads can temporarily use additional cache space."));
   const web = group("Desktop & Browser");
   web.append(
     el(

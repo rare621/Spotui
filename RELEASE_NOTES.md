@@ -1,11 +1,7 @@
-# 💚 A little more polish for your music
+# 💚 Less clutter, more music
 
-- A cleaner Library and easier-to-browse Settings.
-- Tidier Radio pages with clearer tuning controls.
-- A refreshed Connect menu for choosing where to listen.
-- A new USpot Premium panel showing your included perks.
-- Matching improvements to the computer interface, plus small fixes throughout.
+- Automatic limits keep temporary music and artwork from taking up too much space.
+- Find cache usage in **Settings → Storage**.
+- Your history, listening stats, Radio progress and Home personalization stay yours.
 
-Install **USpot.apk** over your current USpot to keep your music history and settings. 🎧
-
-Thanks to Spotui’s creators and contributors for the foundation that makes USpot possible.
+Install **USpot.apk** over your current USpot to keep your data. 🎧

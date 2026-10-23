@@ -102,7 +102,7 @@ const text=id=>w.document.getElementById(id).textContent;
  click('#like-current');await tick();assert.equal(w.__state.current.liked,true);
  failMutation=true;click('#like-current');await tick();assert.equal(w.__state.current.liked,true);assert.match(text('toast'),/Spotify rejected/);failMutation=false;
  click('#current-menu');await tick();assert.match(text('action-dialog'),/Add to playlist/);w.document.getElementById('action-dialog').close();
- click('[data-view="settings"]');await tick();assert.match(text('content'),/Import data/);assert.match(text('content'),/Follow device theme/);assert.equal(w.document.getElementById('pair-form'),null);assert.equal(calls.some(c=>c.token),false);
+ click('[data-view="settings"]');await tick();assert.match(text('content'),/Import data/);assert.match(text('content'),/Temporary music & artwork limit: 256 MB/);assert.match(text('content'),/Follow device theme/);assert.equal(w.document.getElementById('pair-form'),null);assert.equal(calls.some(c=>c.token),false);
  // The full player follows the current song and exposes the same controls.
  w.__fullPlayer();assert.equal(text('full-title'),w.__state.current.title);assert.match(text('full-from'),/Radio/);assert.ok(w.document.getElementById('full-like'));w.document.getElementById('action-dialog').close();
  // Playlist creation uses the real action contract; rejected writes do not fake success.

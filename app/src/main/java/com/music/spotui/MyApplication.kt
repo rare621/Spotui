@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import java.util.Locale
 import timber.log.Timber
 
@@ -71,5 +72,14 @@ class MyApplication : Application(){
         appScope.launch { runCatching { api.getAlbums().collect {} } }
         appScope.launch { runCatching { api.getArtists().collect {} } }
         com.music.spotui.di.SmartDownloadManager.start(this)
+        appScope.launch {
+            runCatching { com.music.spotui.di.SongPlayer.mediaCache(this@MyApplication) }
+                .onFailure { Timber.w(it, "Media cache initialization deferred") }
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                runCatching { com.music.spotui.soulseek.SoulseekSource.pruneCache(this@MyApplication) }
+                runCatching { com.music.spotui.cache.CacheBudget.pruneInstalledUpdates(java.io.File(cacheDir, "updates"), BuildConfig.VERSION_CODE.toLong(), System.currentTimeMillis()) }
+                kotlinx.coroutines.delay(300_000L)
+            }
+        }
     }
 }
