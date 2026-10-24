@@ -21,4 +21,8 @@ class BackupIdentityPolicyTest {
         assertFalse(BackupIdentityPolicy.compatible("com.music.spotui.modified", "other"))
         assertFalse(BackupIdentityPolicy.compatible("", ""))
     }
+    @org.junit.Test fun streamingPreviewSharesBackupFamily() {
+        org.junit.Assert.assertTrue(BackupIdentityPolicy.compatible("com.music.spotui.modified", "com.music.spotui.modified.streampreview"))
+        org.junit.Assert.assertTrue(BackupIdentityPolicy.compatible("com.music.spotui.modified.streampreview", "com.music.spotui.modified"))
+    }
 }

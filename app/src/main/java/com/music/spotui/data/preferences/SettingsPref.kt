@@ -45,7 +45,7 @@ private fun readQ(c: Context, key: String, def: StreamQuality): StreamQuality =
 private fun writeQ(c: Context, key: String, q: StreamQuality) =
     prefs(c).edit().putString(key, q.name).apply()
 
-fun getWifiQuality(c: Context): StreamQuality = readQ(c, KEY_WIFI_Q, StreamQuality.HIGH)
+fun getWifiQuality(c: Context): StreamQuality = readQ(c, KEY_WIFI_Q, StreamQuality.LOSSLESS)
 fun setWifiQuality(c: Context, q: StreamQuality) = writeQ(c, KEY_WIFI_Q, q)
 
 fun getCellularQuality(c: Context): StreamQuality = readQ(c, KEY_CELL_Q, StreamQuality.NORMAL)
@@ -149,3 +149,6 @@ fun currentStreamingQuality(c: Context): StreamQuality {
     val isMetered = cm?.isActiveNetworkMetered ?: false
     return if (isMetered) getCellularQuality(c) else getWifiQuality(c)
 }
+
+/** Automatic independent lookup after normal YouTube lookup failure. No test-only override. */
+fun isPlaybackBackupEnabled(c: Context): Boolean = true

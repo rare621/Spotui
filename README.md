@@ -54,6 +54,8 @@ Enjoy a cleaner Library, tidier Radio pages and a refreshed Connect menu for you
 - **⬇️ Take favorites offline.** Download music yourself, or turn on Smart Downloads in Settings. It's off until you choose to enable it.
 - **🎚️ Your sound.** Equalizer presets and manual controls, plus a device menu for connected speakers and headphones.
 - **🌗 Your look.** Light, dark, or follow your phone's theme.
+- **🎧 Another way to keep listening.** Automatic playback and download backup tries another lookup when the usual one fails.
+- **⏭️ A head start on the next song.** USpot starts preparing the next queued song after about two seconds of playback.
 - **🚘 On the road.** Browse your music and recent radios with Android Auto.
 - **🧹 Keep storage tidy.** Temporary music and artwork use a 256 MB managed cache budget, with automatic cleanup and a Storage page. Your listening data stays separate.
 - **💾 Keep your memories.** Export and import your local data from Settings.

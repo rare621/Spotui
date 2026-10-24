@@ -69,7 +69,7 @@ class WebUiService : Service() {
             val ip = WebUiController.wifiAddress(this) ?: error("Connect your phone to Wi-Fi first.")
             address = ip
             val secret = WebUiProtocol.secret()
-            val port = 8765
+            val port = if (com.music.spotui.BuildConfig.IS_PREVIEW) 8766 else 8765
             val started = WebUiServer(applicationContext, ip, port, secret)
             started.start(70_000, false)
             server = started

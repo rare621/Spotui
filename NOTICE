@@ -1,6 +1,6 @@
 USpot — modified version of Spotui
-Display version: 1.1; internal build: 86
-Modification notice date: October 23, 2026
+Display version: 1.1; internal build: 90
+Modification notice date: October 24, 2026
 
 Original project: Spotui, by its authors and contributors
 https://github.com/Spotui/Spotui
@@ -16,6 +16,7 @@ equalizer controls, backup, downloads, playback preparation/recovery, Android
 Auto browsing and voice requests, branding and build/release packaging.
 This build refreshes Spotify library writes, adds playlist song editing and
 library song selection, visible song menus and an audio output chooser.
+This build adds automatic independent playback/download lookup, song-labelled local diagnostics, and early next-track preparation logging.
 Features are subject to the validation limits in MODIFIED_VERIFICATION.md.
 
 This program is distributed WITHOUT ANY WARRANTY; without even the implied

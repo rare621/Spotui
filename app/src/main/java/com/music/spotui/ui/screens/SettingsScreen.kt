@@ -89,7 +89,8 @@ fun SettingsScreen(navController: NavController) {
     if (showOpenSourceNotices) {
         val notices = remember(context) {
             context.assets.open("licenses/NOTICE.txt").bufferedReader().use { it.readText() } + "\n\n" +
-                context.assets.open("licenses/GPL-3.0.txt").bufferedReader().use { it.readText() }
+                context.assets.open("licenses/GPL-3.0.txt").bufferedReader().use { it.readText() } +
+                "\n\n" + context.assets.open("licenses/PLAYBACK-BACKUP-NOTICES.txt").bufferedReader().use { it.readText() }
         }
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showOpenSourceNotices = false },

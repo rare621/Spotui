@@ -223,7 +223,7 @@ class PlaybackService : MediaLibraryService() {
         SongPlayer.onStreamFailed = { query ->
             val ticket = recoveryTicket()?.takeIf { it.query == query }
             if (ticket != null) streamRecovery.failed(ticket)
-            else com.music.spotui.data.preferences.PlaybackDiagnostics.record(applicationContext, "Recovery ignored", "Stale query or inactive play intent")
+            else com.music.spotui.data.preferences.PlaybackDiagnostics.record(applicationContext, "Recovery ignored", "Stale query or inactive play intent",song=SongPlayer.diagnosticSong(query))
         }
         SongPlayer.onTrackEnded = { onTrackEnded() }
         SongPlayer.onQueueTailApproaching = { if (currentSongState.collection.value?.type == "radio") fillRadioQueue(false) else if (currentSongState.smartShuffle.value) prepareSmartShuffle() }
@@ -457,7 +457,7 @@ class PlaybackService : MediaLibraryService() {
     private val streamRecovery by lazy {
         com.music.spotui.audio.StreamRetryController(serviceScope, ::recoveryTicket, SongPlayer::isPlaying,
             retry = { ticket ->
-                com.music.spotui.data.preferences.PlaybackDiagnostics.record(applicationContext, "Recovery retry", "10 second backoff")
+                com.music.spotui.data.preferences.PlaybackDiagnostics.record(applicationContext, "Recovery retry", "10 second backoff",song=SongPlayer.diagnosticSong(ticket.query))
                 val position = SongPlayer.getCurrentPosition()
                 if (position > 0L) SongPlayer.setRestorePoint(ticket.query, position)
                 SongPlayer.invalidateResolvedStream(ticket.query)
@@ -468,7 +468,7 @@ class PlaybackService : MediaLibraryService() {
                 val index = queue.indexOfFirst { it.id == currentSongState.songId.value }
                 if (index < 0 || index >= queue.lastIndex) false
                 else {
-                    com.music.spotui.data.preferences.PlaybackDiagnostics.record(applicationContext, "Recovery skip", "Holding next song on further failures")
+                    com.music.spotui.data.preferences.PlaybackDiagnostics.record(applicationContext, "Recovery skip", "Holding next song on further failures",song=SongPlayer.diagnosticSong(queue[index].url))
                     com.music.spotui.ui.components.PlaybackFeedback.skipping()
                     advance(forward = true)
                     true

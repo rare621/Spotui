@@ -41,6 +41,10 @@ object AppUpdates {
     private fun prefs(c: Context) = c.getSharedPreferences("app_updates", Context.MODE_PRIVATE)
 
     suspend fun check(context: Context, manual: Boolean = false) {
+        if (BuildConfig.IS_PREVIEW) {
+            mutable.update { it.copy(checked = true, error = if (manual) "You are testing a preview. Normal releases stay in your regular USpot app." else "") }
+            return
+        }
         if (!checkLock.tryLock()) return
         val c = context.applicationContext
         try {

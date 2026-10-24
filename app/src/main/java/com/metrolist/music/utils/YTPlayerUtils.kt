@@ -612,12 +612,13 @@ object YTPlayerUtils {
         } else "bytes=0-${2 * 1024 * 1024 - 1}"
         val request = okhttp3.Request.Builder().get().url(url).addHeader("Range", range)
         YouTubeClient.forStreamUrl(url).mediaHeaders().forEach { (name, value) -> request.header(name, value) }
+        val diagnosticSong = com.music.spotui.audio.PlaybackDiagnosticSong.current()
         return com.music.spotui.audio.StreamUrlProbe.check(httpClient.newCall(request.build()), contentLength, onRejected = { code ->
             trace.rejectedHttp(code)
             runCatching {
                 com.music.spotui.data.preferences.PlaybackDiagnostics.record(
                     CipherDeobfuscator.appContext, "YouTube stream rejected",
-                    "${YouTubeClient.forStreamUrl(url).clientName}: HTTP $code",
+                    "${YouTubeClient.forStreamUrl(url).clientName}: HTTP $code", song = diagnosticSong,
                 )
             }
         })

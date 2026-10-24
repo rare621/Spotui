@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -53,6 +54,9 @@ object Downloads {
                 "Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
             )
+            val headers = com.music.spotui.audio.StreamRequestHeaders.get(url)
+                ?: if (url.contains("googlevideo.com")) com.metrolist.innertube.models.YouTubeClient.forStreamUrl(url).mediaHeaders() else emptyMap()
+            headers.forEach { (key, value) -> setRequestProperty(key, value) }
         }
 
     /**
@@ -187,14 +191,17 @@ object Downloads {
         onDownloadsChanged?.invoke()
         lastDownloadError = null
         com.music.spotui.data.preferences.FailedDownloads.dismiss(appContext,song.id)
-        jobs[query] = scope.launch {
+        jobs[query] = scope.launch(com.music.spotui.audio.PlaybackDiagnosticSong.context(
+            com.music.spotui.audio.DiagnosticSongLabel.create(song.title,song.singer))) {
             var ok=false
             var cancelled=false
             try {
+                com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Download started")
                 ok=downloadSlots.withPermit { downloadToFile(song,appContext) }
             } catch(e:kotlinx.coroutines.CancellationException) { cancelled=true;throw e
             } catch(e:Exception) { lastDownloadError=e.message
             } finally {
+                if (!cancelled) com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,if(ok)"Download ready"else"Download failed")
                 jobs.remove(query);downloading.remove(query);downloadProgress.remove(query);downloadingSongs.remove(query)
                 if(!ok && !cancelled)com.music.spotui.data.preferences.FailedDownloads.record(appContext,song)
                 kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
@@ -211,6 +218,10 @@ object Downloads {
         song: com.music.spotui.data.entity.SongsModel,
         appContext: Context,
     ): Boolean {
+        SongPlayer.registerLossless(listOf(song.url to song.spotifyTrackId))
+        SongPlayer.registerDuration(listOf(song.url to song.durationMs))
+        SongPlayer.registerExplicit(listOf(song.url to song.explicit))
+        SongPlayer.registerMetadata(listOf(song.url to SongPlayer.TrackMatchMetadata(song.title, song.singer, song.album)))
         val dlQuality = com.music.spotui.data.preferences.getDownloadQuality(appContext)
         // Deezer: use immediately if it yields FLAC (HiFi). If it only yields MP3
         // (free account), HOLD it and try the real FLAC sources first — otherwise a
@@ -262,27 +273,37 @@ object Downloads {
         val query = song.url
         // Resolve a fresh network stream URL (bypass any local-file short-circuit),
         // walking the ranked video candidates like playback does.
-        val playback = SongPlayer.resolveYtPlayback(query, dlQuality.audioQuality, appContext) ?: run {
-            if (ytFirst && downloadDeezerRaw(song, appContext, heldDeezer!!)) return true
-            lastDownloadError = "Couldn't resolve a stream"
-            return false
+        suspend fun save(playback: com.metrolist.music.utils.YTPlayerUtils.PlaybackData): Boolean {
+            val dir = java.io.File(appContext.filesDir, "downloads").apply { mkdirs() }
+            val extension = if (playback.format.mimeType.startsWith("audio/webm")) "webm" else "m4a"
+            val outFile = java.io.File(dir, "${song.id}.$extension")
+            val tmpFile = java.io.File(dir, "${song.id}.part")
+            try {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                if (!httpDownloadRanged(playback.streamUrl, tmpFile, song.url)) return false
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                if (!tmpFile.renameTo(outFile)) {
+                    lastDownloadError = "Couldn't save file"
+                    return false
+                }
+                com.music.spotui.data.preferences.addDownload(appContext, song, outFile.absolutePath)
+                lastDownloadError = null
+                return true
+            } finally { tmpFile.delete() }
         }
-
-        val dir = java.io.File(appContext.filesDir, "downloads").apply { mkdirs() }
-        val outFile = java.io.File(dir, "${song.id}.m4a")
-        val tmpFile = java.io.File(dir, "${song.id}.part")
-
-        if (!httpDownloadRanged(playback.streamUrl, tmpFile, song.url)) {
-            runCatching { tmpFile.delete() }
-            return false
+        val playback = SongPlayer.resolveYtPlayback(query, dlQuality.audioQuality, appContext)
+        if (playback != null && save(playback)) return true
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        // A URL can resolve but fail during the actual transfer. Retry through the independent backup too.
+        // If lookup itself already used the backup, don't launch the same extraction twice.
+        val alreadyBackup = playback == null || com.music.spotui.audio.StreamRequestHeaders.get(playback.streamUrl) != null
+        if (!alreadyBackup && com.music.spotui.data.preferences.isPlaybackBackupEnabled(appContext)) {
+            val backup = SongPlayer.resolveYtPlayback(query, dlQuality.audioQuality, appContext, backupOnly = true)
+            if (backup != null && save(backup)) return true
         }
-        if (!tmpFile.renameTo(outFile)) {
-            lastDownloadError = "Couldn't save file"
-            runCatching { tmpFile.delete() }
-            return false
-        }
-        com.music.spotui.data.preferences.addDownload(appContext, song, outFile.absolutePath)
-        return true
+        if (ytFirst && downloadDeezerRaw(song, appContext, heldDeezer!!)) return true
+        lastDownloadError = lastDownloadError ?: "Couldn't resolve a stream"
+        return false
     }
 
     /**

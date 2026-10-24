@@ -37,3 +37,11 @@ by Spotify. The code license does not grant rights to third-party music,
 trademarks or services.
 
 USpot Desktop & Browser uses NanoHTTPD 2.3.1 (BSD 3-Clause). Project: https://github.com/NanoHttpd/nanohttpd . See bundled NanoHTTPD-LICENSE.txt.
+
+USpot automatic playback backup:
+youtubedl-android 0.18.1 — GPL-3.0
+https://github.com/yausername/youtubedl-android/tree/0.18.1
+The bundled native runtime includes Python and QuickJS; see the upstream build sources and licenses.
+yt-dlp 2026.10.21 — Unlicense, with bundled ISC/MIT components
+https://github.com/yt-dlp/yt-dlp/tree/2026.10.21
+Dependency notices: third_party/playback-backup/ and bundled PLAYBACK-BACKUP-NOTICES.txt.

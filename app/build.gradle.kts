@@ -9,17 +9,20 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+val uspotPreview = providers.gradleProperty("uspotPreview").map { it.toBoolean() }.getOrElse(false)
+
 android {
     namespace = "com.music.spotui"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.music.spotui.modified"
-        manifestPlaceholders["uspotAppLabel"] = "USpot"
+        applicationId = if (uspotPreview) "com.music.spotui.modified.streampreview" else "com.music.spotui.modified"
+        manifestPlaceholders["uspotAppLabel"] = if (uspotPreview) "USpot Preview" else "USpot"
+        buildConfigField("boolean", "IS_PREVIEW", uspotPreview.toString())
         minSdk = 26
         targetSdk = 34
         // Must exceed every published build: 1.5 shipped as versionCode 14 ("1.4").
-        versionCode = 86
+        versionCode = 90
         versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -63,6 +66,8 @@ android {
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
+    packaging.jniLibs.useLegacyPackaging = true
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
@@ -86,6 +91,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
     implementation("androidx.core:core-ktx:1.13.1")

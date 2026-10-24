@@ -31,7 +31,7 @@ import com.music.spotui.data.preferences.RadioSkipMemory
     TextButton(onClick={expanded=!expanded}){Text("Playback diagnostics ${if(expanded)"▴" else "▾"}",color=AppPalette)}
     if(expanded) {
         val report=remember(revision){"USpot ${com.music.spotui.BuildConfig.VERSION_NAME} build ${com.music.spotui.BuildConfig.VERSION_CODE}\n"+PlaybackDiagnostics.report(context)}
-        Text("Local status only. Copy this report when playback fails; it contains no sign-in cookies or stream URLs.",color=AppSecondary,fontSize=12.sp)
+        Text("Local status and song names. Copy this report when playback fails; it contains no sign-in cookies or stream URLs.",color=AppSecondary,fontSize=12.sp)
         Row {
             TextButton(onClick={
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("USpot playback diagnostics",report))

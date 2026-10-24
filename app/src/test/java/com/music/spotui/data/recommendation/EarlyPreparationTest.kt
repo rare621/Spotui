@@ -43,4 +43,10 @@ class EarlyPreparationTest {
         assertFalse(NextTrackPreparationPolicy.stillNext("A", "B", true))
         assertFalse(NextTrackPreparationPolicy.stillNext("A", "A", false))
     }
+    @Test fun playerStartEventPlusWatchdogTicksReachPreparationAtTwoSeconds() {
+        val clock=PreparationClock()
+        clock.tick("song",true,100)
+        for (time in 350L..1850L step 250L) assertFalse(NextTrackPreparationPolicy.shouldPrepareEarly(clock.tick("song",true,time),true,false))
+        assertTrue(NextTrackPreparationPolicy.shouldPrepareEarly(clock.tick("song",true,2100),true,false))
+    }
 }

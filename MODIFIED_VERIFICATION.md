@@ -1,4 +1,16 @@
-# USpot build 86 verification
+# USpot build 90 verification
+
+Build 90 promotes the independently tested preview lookup into the normal app. The source and pinned resource now live in main, and the native dependency is bundled in all normal builds. Automatic fallback is always enabled; both backup-only testing and automatic-backup UI switches are removed. Existing test-mode preferences are ignored. Spotify metadata/authentication, primary audio providers, downloads, 30-second listening qualification, Radio persistence and Home personalization stay on the existing paths.
+
+The primary YouTube path runs first. A miss/error/deadline can invoke yt-dlp with independent search and recording checks. A rejected/stalled returned primary stream can prefer the backup during the existing retry cycle. The player keeps its current Android audio session and queue semantics. Preview 89's local successful backup test was reported by the user; that does not establish success for every account, region or song.
+
+Diagnostics now persist bounded display title/artist labels alongside fixed status events. Lookups use coroutine-scoped song context so concurrent current/next/download operations cannot overwrite each other's labels; callback probes capture their own labels. Reports include song names by request but do not add raw queries, stream URLs, cookies or credentials. Existing event-only rows remain readable. The report is local and contains at most 50 events, with labels capped at 220 characters; no listening data is synchronized to Spotify.
+
+Next queue preparation already used a two-audible-second threshold. The clock is now seeded at the player playing-state event and polled every 250 ms. Preparation still follows the actual queue, checks generation/current-next identity, cancels on skips, avoids repeat-one, backs off failures and caches only reusable audio intros. Its bounded lookup window now allows the automatic backup to finish. New log entries identify the next song being prepared. This starts lookup around two seconds; it is not a guarantee the network/source is ready in two seconds.
+
+Local normal-package assembly passed, along with 412 unit tests (392 app, 20 Spotify), with zero failures/errors/skips. Browser interaction checks passed using simulated phone/audio. New regression tests cover concurrent song-label attribution, callback capture, label redaction and exact two-second preparation timing. CI repeats build/tests and enforces the production app ID, build number, v2 signature and existing certificate before publishing. Physical upgrades, Bluetooth and all provider/device combinations still require device testing.
+
+## Existing cache protections retained
 
 Managed reusable cache budget: 128 MiB ExoPlayer audio + 64 MiB Glide artwork + 64 MiB Soulseek lossless. Media3 and Glide own their cache journals and eviction. Soulseek pre-reserves space, bounds received bytes, protects current/prepared/recent files and skips cache downloads when protected data leaves insufficient space. Existing oversized pinned files can temporarily exceed the budget until safe to prune. Android WebView/resolver caches and active update/backup files are outside this managed media budget; it is not a promise about Android’s total cache or app size.
 

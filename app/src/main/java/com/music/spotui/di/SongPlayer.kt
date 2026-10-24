@@ -125,6 +125,14 @@ object SongPlayer {
     // reject a same-title song by a different artist (different duration).
     private val durationRegistry = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
+    internal fun diagnosticSong(query: String): String {
+        val meta = metadataRegistry[query]
+        if (meta != null) return com.music.spotui.audio.DiagnosticSongLabel.create(meta.title, meta.artist)
+        val track = boundState?.queue?.value?.firstOrNull { it.url == query }
+        if (track != null) return com.music.spotui.audio.DiagnosticSongLabel.create(track.title, track.singer)
+        return if (query == currentRequest) com.music.spotui.audio.DiagnosticSongLabel.create(metaTitle, metaArtist) else ""
+    }
+
     /** Register query→durationMs pairs (populated whenever the queue changes). */
     fun registerDuration(pairs: List<Pair<String, Int>>) {
         pairs.forEach { (query, ms) ->
@@ -209,7 +217,7 @@ object SongPlayer {
     }
 
     private fun cleanSpotifySearchTitle(title: String): String =
-        title.replace(featSearchPattern, "").trim()
+        com.music.spotui.audio.MusicTitlePolicy.clean(title)
 
     private fun searchTextForPlayback(song: String): String =
         if (song.startsWith(SPOTIFY_TRACK_PREFIX) && song.contains('|')) {
@@ -270,7 +278,7 @@ object SongPlayer {
         if (tryPlayPrepared(song)) return
         currentRequest = song
         com.music.spotui.audio.PlaybackPresentation.set(com.music.spotui.audio.PlaybackPresentation.Stage.CONNECTING)
-        com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Lookup started")
+        com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Lookup started",song=diagnosticSong(song))
         playbackVisit++
         trackEndGate.reset()
         bufferingRecoveryFor = null
@@ -324,7 +332,7 @@ object SongPlayer {
             }
             Log.w(TAG, "web playback on but no Spotify id for query: $song — using fallback engine")
         }
-        playbackResolveJob = scope.launch {
+        playbackResolveJob = scope.launch(com.music.spotui.audio.PlaybackDiagnosticSong.context(diagnosticSong(song))) {
             try {
                 if (wantsQuickStart(song, appContext)) {
                     val started = kotlinx.coroutines.withTimeoutOrNull(STARTUP_TIMEOUT_MS) {
@@ -366,7 +374,7 @@ object SongPlayer {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if (currentRequest != song) return@withContext
             ensurePlayer(appContext)
-            com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Stream prepared",currentSource.replace("•"," "))
+            com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Stream prepared",currentSource.replace("•"," "),song=diagnosticSong(song))
             player!!.setMediaItem(buildMediaItem(streamUrl, mimeType))
             player!!.prepare()
             // Restored session: continue from where the last run stopped.
@@ -384,7 +392,7 @@ object SongPlayer {
 
     private fun streamFailed(song: String, appContext: Context) {
         if (currentRequest != song) return
-        com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Lookup failed","No playable source or deadline reached")
+        com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"Lookup failed","No playable source or deadline reached",song=diagnosticSong(song))
         com.music.spotui.audio.PlaybackPresentation.set(com.music.spotui.audio.PlaybackPresentation.Stage.RETRYING)
         val visit = playbackVisit
         android.os.Handler(android.os.Looper.getMainLooper()).post {
@@ -671,7 +679,9 @@ object SongPlayer {
         val baseUpstream = androidx.media3.datasource.DefaultDataSource.Factory(context, http)
         val resolvedUpstream = androidx.media3.datasource.ResolvingDataSource.Factory(baseUpstream) { dataSpec ->
             val url = dataSpec.uri.toString()
-            if (url.contains("googlevideo.com")) {
+            val backupHeaders = com.music.spotui.audio.StreamRequestHeaders.get(url)
+            if (backupHeaders != null) dataSpec.withAdditionalHeaders(backupHeaders)
+            else if (url.contains("googlevideo.com")) {
                 dataSpec.withAdditionalHeaders(
                     com.metrolist.innertube.models.YouTubeClient.forStreamUrl(url).mediaHeaders(),
                 )
@@ -723,6 +733,12 @@ object SongPlayer {
         com.music.spotui.deezer.DeezerAwareDataSourceFactory(cacheDataSourceFactory(context)).createDataSource()
 
     private suspend fun resolveStreamUrl(
+        song: String, appContext: Context, forPlayback: Boolean = false, allowYouTube: Boolean = true,
+    ): String? = withContext(com.music.spotui.audio.PlaybackDiagnosticSong.context(diagnosticSong(song).ifBlank { com.music.spotui.audio.PlaybackDiagnosticSong.current() })) {
+        resolveStreamUrlInternal(song, appContext, forPlayback, allowYouTube)
+    }
+
+    private suspend fun resolveStreamUrlInternal(
         song: String,
         appContext: Context,
         forPlayback: Boolean = false,
@@ -1072,7 +1088,10 @@ object SongPlayer {
             if (split.size == 2) candidateTitle = split[1].trim()
         }
 
-        val titleScore = bigramSimilarity(candidateTitle, expected.title)
+        val titleScore = bigramSimilarity(
+            com.music.spotui.audio.MusicTitlePolicy.clean(candidateTitle),
+            com.music.spotui.audio.MusicTitlePolicy.clean(expected.title),
+        )
         val uploaderArtistScore = bigramSimilarity(
             candidate.artists.joinToString(" ") { it.name },
             expected.artist,
@@ -1225,6 +1244,7 @@ object SongPlayer {
         }.distinct()
         val hits = searchQueries.flatMap { searchSongs(it) }.distinctBy { it.id }
         if (hits.isEmpty()) {
+            appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it, "YouTube search result", "No song results") }
             Log.w(TAG, "resolveVideoId: no YouTube song results for: $searchText")
             return emptyList()
         }
@@ -1279,6 +1299,7 @@ object SongPlayer {
                 )
                 .map { it.item }
             if (accepted.isEmpty()) {
+                appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it, "YouTube search result", "No accepted matches") }
                 val best = transferScored.maxByOrNull { it.score }
                 Log.w(
                     TAG,
@@ -1336,28 +1357,60 @@ object SongPlayer {
      * 3 ranked video candidates when one has no obtainable stream.
      */
     internal suspend fun resolveYtPlayback(
+        query: String, audioQuality: com.metrolist.music.constants.AudioQuality, appContext: Context,
+        forPlayback: Boolean = true, backupOnly: Boolean = false,
+    ): YTPlayerUtils.PlaybackData? = withContext(com.music.spotui.audio.PlaybackDiagnosticSong.context(diagnosticSong(query).ifBlank { com.music.spotui.audio.PlaybackDiagnosticSong.current() })) {
+        resolveYtPlaybackInternal(query, audioQuality, appContext, forPlayback, backupOnly)
+    }
+
+    private suspend fun resolveYtPlaybackInternal(
         query: String,
         audioQuality: com.metrolist.music.constants.AudioQuality,
         appContext: Context,
         forPlayback: Boolean = true,
-    ): YTPlayerUtils.PlaybackData? =
-        // The PoToken/solver WebViews wait on JS callbacks with no deadline; a hung
-        // WebView left playback at 0:00 forever (#95, #79) instead of failing over.
-        kotlinx.coroutines.withTimeoutOrNull(45_000L) {
-            resolveYtPlaybackUnbounded(query, audioQuality, appContext, forPlayback)
-        } ?: null.also { Log.w(TAG, "YouTube resolve failed or timed out for: ${searchTextForPlayback(query)}") }
+        backupOnly: Boolean = false,
+    ): YTPlayerUtils.PlaybackData? {
+        val backupEnabled = com.music.spotui.data.preferences.isPlaybackBackupEnabled(appContext)
+        val candidates = linkedSetOf<String>()
+        val forceBackup = backupOnly || (backupEnabled && com.music.spotui.audio.RejectedStreamRecovery.preferBackup(query))
+        com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext, "Playback backup", if (backupEnabled) "Enabled" else "Disabled")
+        return com.music.spotui.audio.StreamLookupFallback.resolve(
+            primaryBudgetMs = if (backupEnabled) 22_000L else 45_000L,
+            backupBudgetMs = 32_000L,
+            backupEnabled = backupEnabled,
+            primary = {
+                resolveYtPlaybackUnbounded(query, audioQuality, appContext, forPlayback, candidates)
+            },
+            backup = {
+                com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext, "Backup requested",
+                    if (forceBackup) "Retry after stream failure" else "${candidates.size} primary candidates")
+                val directId = searchTextForPlayback(query)
+                if (directId.matches(Regex("[A-Za-z0-9_-]{11}"))) candidates.add(directId)
+                val meta = metadataRegistry[query] ?: if (candidates.isEmpty()) ensureSpotifyMatchMetadata(query) else null
+                val target = meta?.let { com.music.spotui.audio.BackupSearchPolicy.Target(it.title, it.artist,
+                    durationRegistry[query] ?: 0, explicitRegistry[query]?.takeIf { it || spotifyMetadataRepaired.contains(query) }) }
+                com.music.spotui.audio.YtDlpBackup.lookup(appContext, candidates.toList(), target, audioQuality, forPlayback)
+            },
+            forceBackup = forceBackup,
+        ).also { result ->
+            if (result == null && backupEnabled) com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,
+                "Backup exhausted", "No accepted audio or lookup deadline reached")
+        }
+    }
 
     private suspend fun resolveYtPlaybackUnbounded(
         query: String,
         audioQuality: com.metrolist.music.constants.AudioQuality,
         appContext: Context,
-        forPlayback: Boolean = true,
+        forPlayback: Boolean,
+        backupCandidates: MutableSet<String>,
     ): YTPlayerUtils.PlaybackData? {
         com.music.spotui.data.preferences.PlaybackDiagnostics.record(appContext,"YouTube search started",if (forPlayback) "Playback" else "Preload")
         val connectivityManager =
             appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val tried = mutableSetOf<String>()
         suspend fun tryIds(ids: List<String>): YTPlayerUtils.PlaybackData? {
+            backupCandidates.addAll(ids)
             for (videoId in ids) {
                 if (!tried.add(videoId)) continue
                 // Allow the existing bounded proof (12s) and signature (8s)
@@ -1475,8 +1528,8 @@ object SongPlayer {
         val request=currentRequest
         val visit=playbackVisit
         if(request.isBlank())return
-        appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it,"Buffering watch armed") }
-        bufferingWatch=scope.launch {
+        appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it,"Buffering watch armed",song=diagnosticSong(request)) }
+        bufferingWatch=scope.launch(com.music.spotui.audio.PlaybackDiagnosticSong.context(diagnosticSong(request))) {
             delay(BUFFER_TIMEOUT_MS)
             val stalled=withContext(Dispatchers.Main) {
                 player===observedPlayer && currentRequest==request && playbackVisit==visit &&
@@ -1493,6 +1546,7 @@ object SongPlayer {
             val ctx=appCtx ?: return@launch
             com.music.spotui.data.preferences.PlaybackDiagnostics.record(ctx,"Buffering recovery","Buffer deadline reached")
             val position=withContext(Dispatchers.Main) {
+                requestBackupAfterRejectedStream(request, observedPlayer?.currentMediaItem?.localConfiguration?.uri?.toString(), ctx, "Returned stream stalled")
                 com.music.spotui.audio.PlaybackClockPolicy.position(observedPlayer?.currentPosition ?: 0L,getDuration())
             }
             invalidateResolvedStream(request)
@@ -1522,6 +1576,8 @@ object SongPlayer {
 
     private val midPlayErrorListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            preparationAudibleMs = preparationClock.tick("$playbackVisit:$currentRequest",
+                isPlaying && !webPlaybackActive(), android.os.SystemClock.elapsedRealtime())
             if(isPlaying)com.music.spotui.audio.PlaybackPresentation.set(com.music.spotui.audio.PlaybackPresentation.Stage.PLAYING)
             boundState?.updatePlayingState(isPlaying)
             if (isPlaying) appCtx?.let { com.music.spotui.data.preferences.savePlaybackActive(it, true) }
@@ -1553,7 +1609,7 @@ object SongPlayer {
                     reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS)) {
                 recoveryAllowed = false
                 appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it, "Playback intent stopped",
-                    if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) "Noisy output" else "Audio focus") }
+                    if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) "Noisy output" else "Audio focus", song=diagnosticSong(currentRequest)) }
                 onPlaybackRequestChanged?.invoke()
             }
             if (playWhenReady) recoveryAllowed = true
@@ -1567,7 +1623,7 @@ object SongPlayer {
                 Player.STATE_READY -> if(player?.playWhenReady == true)com.music.spotui.audio.PlaybackPresentation.Stage.PLAYING else com.music.spotui.audio.PlaybackPresentation.Stage.PAUSED
                 else -> com.music.spotui.audio.PlaybackPresentation.state.value
             })
-            if (playbackState == Player.STATE_READY) { appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it,"Player ready") }; bufferingRecoveryFor = null; trackEndGate.reset() }
+            if (playbackState == Player.STATE_READY) { appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it,"Player ready",song=diagnosticSong(player?.currentMediaItem?.mediaId ?: currentRequest)) }; bufferingRecoveryFor = null; trackEndGate.reset() }
             updateBufferingWatch()
             // Mid-crossfade the outgoing player may end first; the blend advances itself.
             // An emptied playlist also reports ENDED (playSong clears it on every tap);
@@ -1581,11 +1637,12 @@ object SongPlayer {
                 ?: currentRequest.takeIf { it.isNotBlank() } ?: return
             preloadedNext = null
             Log.w(TAG, "mid-play error for $song: ${error.errorCodeName} (code ${error.errorCode})")
+            appCtx?.let { ctx -> requestBackupAfterRejectedStream(song, player?.currentMediaItem?.localConfiguration?.uri?.toString(), ctx, "Player rejected returned stream") }
             // Drop the cached URL — it may have expired (Deezer CDN, YouTube signing).
             streamCache.remove(song)
             sourceCache.remove(song)
             val ctx = appCtx ?: run { onStreamFailed?.invoke(song); return }
-            com.music.spotui.data.preferences.PlaybackDiagnostics.record(ctx,"Player error",error.errorCodeName)
+            com.music.spotui.data.preferences.PlaybackDiagnostics.record(ctx,"Player error",error.errorCodeName,song=diagnosticSong(song))
             // Use the same timed failure policy as initial lookup failures.
             // Do not run a second resolver behind the service's backoff timer.
             bufferingWatch?.cancel(); bufferingWatch = null
@@ -1594,6 +1651,14 @@ object SongPlayer {
                 if (currentRequest == song && playbackVisit == failureVisit) onStreamFailed?.invoke(song)
             }
         }
+    }
+
+    private fun requestBackupAfterRejectedStream(song: String, uri: String?, context: Context, reason: String) {
+        if (!com.music.spotui.data.preferences.isPlaybackBackupEnabled(context)) return
+        val source = sourceCache[song] ?: currentSource.takeIf { song == currentRequest }.orEmpty()
+        if (!source.contains("YouTube", ignoreCase = true) || (uri != null && com.music.spotui.audio.StreamRequestHeaders.get(uri) != null)) return
+        com.music.spotui.audio.RejectedStreamRecovery.failed(song)
+        com.music.spotui.data.preferences.PlaybackDiagnostics.record(context, "Backup recovery armed", reason,song=diagnosticSong(song))
     }
 
     /** The live ExoPlayer instance (may be null before first play). */
@@ -1820,7 +1885,7 @@ object SongPlayer {
     @Volatile var onRetryRequested: (() -> Unit)? = null
     fun retryCurrent(context: Context) {
         val query=currentRequest.takeIf{it.isNotBlank()} ?: boundState?.queue?.value?.firstOrNull{it.id==boundState?.songId?.value}?.url ?: return
-        com.music.spotui.data.preferences.PlaybackDiagnostics.record(context,"Manual retry")
+        com.music.spotui.data.preferences.PlaybackDiagnostics.record(context,"Manual retry",song=diagnosticSong(query))
         onRetryRequested?.invoke()
         setRestorePoint(query,getCurrentPosition())
         invalidateResolvedStream(query)
@@ -1871,6 +1936,7 @@ object SongPlayer {
                         currentPlayer?.isPlaying == true && !webPlaybackActive(), android.os.SystemClock.elapsedRealtime())
                     if (preparationAudibleMs >= 2_000L && currentPlayer?.isPlaying == true && recoveredVisit != playbackVisit) {
                         recoveredVisit = playbackVisit
+                        com.music.spotui.audio.RejectedStreamRecovery.recovered(currentRequest)
                         onPlaybackRecovered?.invoke()
                     }
                     if (state != null && currentPlayer != null && !webPlaybackActive()) {
@@ -1971,11 +2037,15 @@ object SongPlayer {
         if (!eligible) return
         val now = android.os.SystemClock.elapsedRealtime()
         if (!preparationBackoff.ready(now)) return
-        preparationJob = scope.launch {
+        preparationJob = scope.launch(com.music.spotui.audio.PlaybackDiagnosticSong.context(diagnosticSong(next.url))) {
+            com.music.spotui.data.preferences.PlaybackDiagnostics.record(ctx,"Next song preparation started","Queue lookahead after 2 seconds")
             try {
-                val url = kotlinx.coroutines.withTimeoutOrNull(35_000L) {
+                val url = kotlinx.coroutines.withTimeoutOrNull(55_000L) {
                     resolveStreamUrl(next.url, ctx)
-                } ?: return@launch
+                } ?: run {
+                    com.music.spotui.data.preferences.PlaybackDiagnostics.record(ctx,"Next song preparation failed","Will retry in background")
+                    return@launch
+                }
                 val valid = withContext(Dispatchers.Main) {
                     val q = state.queue.value
                     val currentIndex = q.indexOfFirst { it.id == state.songId.value }
@@ -1993,6 +2063,7 @@ object SongPlayer {
                 }
                 // Only reusable YouTube streams get an intro cached. Single-use/lossless
                 // providers are handed directly to the player's existing data source.
+                if (valid) com.music.spotui.data.preferences.PlaybackDiagnostics.record(ctx,"Next song prepared","Ready for queue transition")
                 if (valid && sourceCache[next.url] == "YouTube") cacheIntro(url, ctx)
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
