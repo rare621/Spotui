@@ -56,6 +56,11 @@ internal object DeezerSession {
 
     fun hasArl(): Boolean = arl.isNotBlank()
 
+    @Synchronized fun validateAccount(): Boolean = runCatching {
+        val result = callGwApi("deezer.getUserData", "{}").getJSONObject("results")
+        result.optJSONObject("USER")?.optLong("USER_ID", 0L)?.let { it > 0L } == true
+    }.getOrDefault(false)
+
     /** Ensure the session is authorised. Safe to call repeatedly. */
     @Synchronized
     fun authorize() {

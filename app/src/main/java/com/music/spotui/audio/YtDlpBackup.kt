@@ -33,9 +33,9 @@ internal object YtDlpBackup {
                 emptyList()
             } else {
                 PlaybackDiagnostics.record(context, "Backup search started", "Independent song search")
-                suspend fun search(limit: Int): List<String> {
+                suspend fun search(limit: Int): List<String>? {
                     val request = baseRequest("ytsearch$limit:${BackupSearchPolicy.query(target)}").addOption("--flat-playlist")
-                    val raw = execute(context, request, foreground, "Search", 12_000L) ?: return emptyList()
+                    val raw = execute(context, request, foreground, "Search", 12_000L) ?: return null
                     val report = BackupSearchPolicy.inspect(raw, target)
                     report.rejected.forEach { (reason, count) ->
                         PlaybackDiagnostics.record(context, "Backup matches rejected", "$reason: $count")
@@ -45,9 +45,9 @@ internal object YtDlpBackup {
                     return report.ids
                 }
                 val first = search(5)
-                if (first.isNotEmpty()) first else {
+                if (first == null) emptyList() else if (first.isNotEmpty()) first else {
                     PlaybackDiagnostics.record(context, "Backup search expanded", "Checking up to 15 results")
-                    search(15)
+                    search(15).orEmpty()
                 }
             }
         }, resolve = { id -> resolve(context, id, quality, foreground) })

@@ -22,8 +22,8 @@ android {
         minSdk = 26
         targetSdk = 34
         // Must exceed every published build: 1.5 shipped as versionCode 14 ("1.4").
-        versionCode = 91
-        versionName = "1.1"
+        versionCode = 94
+        versionName = if (uspotPreview) "1.1 Preview" else "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

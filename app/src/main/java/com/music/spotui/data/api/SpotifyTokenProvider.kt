@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.metrolist.spotify.Spotify
 import com.metrolist.spotify.SpotifyAuth
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -25,6 +26,24 @@ object SpotifyTokenProvider {
     // is remembered briefly instead of being retried by every call on every screen.
     private const val FAILURE_BACKOFF_MS = 30_000L
     private var lastFailureAtMs: Long = 0L
+
+    /** Validate a candidate before committing it or clearing account-specific caches. */
+    suspend fun connectVerified(context: Context, cookie: String): Boolean = mutex.withLock {
+        val previous = Spotify.accessToken
+        var committed = false
+        try {
+            val token = SpotifyAuth.fetchAccessToken(cookie).getOrThrow()
+            Spotify.accessToken = token.accessToken
+            if (Spotify.me().getOrThrow().id.isBlank()) return@withLock false
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            SpotifySession.setSpDc(context, cookie)
+            tokenCookie = cookie
+            expiresAtMs = token.accessTokenExpirationTimestampMs
+            lastFailureAtMs = 0L
+            committed = true
+            true
+        } finally { if (!committed) Spotify.accessToken = previous }
+    }
 
     /** [force] skips the cached token and the failure backoff (fresh login). */
     suspend fun ensureToken(context: Context, force: Boolean = false): Boolean = mutex.withLock {

@@ -63,14 +63,8 @@ fun MyNavHost(
 //    player = ExoPlayer.Builder(context).build()
 
     val context = LocalContext.current
-    // First launch (no Spotify session) lands on the login screen.
-    val startDestination = when {
-        SpotifySession.spDc(context).isBlank() -> Routes.Login.route
-        com.music.spotui.data.preferences.getPrimaryMusicSource(context) == null -> Routes.MusicSource.route
-        com.music.spotui.data.preferences.getPrimaryMusicSource(context) ==
-            com.music.spotui.data.preferences.MusicSource.YOUTUBE_MUSIC &&
-            !com.music.spotui.data.preferences.isYoutubeLoggedIn(context) -> Routes.MusicSource.route
-        else -> Routes.Home.route
+    val startDestination = androidx.compose.runtime.remember {
+        if (!com.music.spotui.setup.SetupProgress.completed(context)) Routes.Setup.route else Routes.Home.route
     }
 
     // Restore the last session: put the track back into the mini player (paused)
@@ -85,12 +79,14 @@ fun MyNavHost(
                     song.coverUri, song.title, song.singer, false, song.id, playerViewModel.queue.value.indexOfFirst { it.id == song.id }.coerceAtLeast(0), song.album)
                 com.music.spotui.di.SongPlayer.ensureCreated(context)
                 com.music.spotui.di.SongPlayer.setRestorePoint(song.url, positionMs)
-                if (com.music.spotui.data.preferences.wasPlaybackActive(context)) {
+                if (startDestination != Routes.Setup.route && com.music.spotui.data.preferences.wasPlaybackActive(context)) {
                     com.music.spotui.di.SongPlayer.playSong(song.url, context)
                 }
             }
         }
     }
+
+    com.music.spotui.ui.screens.StartupConnectionCheck(navHostController)
 
     NavHost(
         navController = navHostController,
@@ -101,6 +97,10 @@ fun MyNavHost(
         popEnterTransition = { fadeIn(tween(180)) + slideInHorizontally(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { -it / 24 } },
         popExitTransition = { fadeOut(tween(150)) + slideOutHorizontally(tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { it / 24 } },
     ){
+        composable(Routes.Setup.route) {
+            LaunchedEffect(Unit) { bottomBarState.value = false; bottomBarPlayerState.value = false }
+            com.music.spotui.ui.screens.SetupScreen(navHostController)
+        }
         composable(Routes.Login.route){
             LaunchedEffect(Unit) {
                 bottomBarState.value = false
@@ -196,7 +196,7 @@ fun MyNavHost(
         ) { navBackStackEntry ->
             LaunchedEffect(playerState.value) {
                 bottomBarState.value = false
-                bottomBarPlayerState.value = playerState.value != ""
+                bottomBarPlayerState.value = false
             }
             DeezerLoginScreen(
                 navHostController,
@@ -217,7 +217,7 @@ fun MyNavHost(
                 bottomBarState.value = false
                 bottomBarPlayerState.value = false
             }
-            MusicSourceScreen(navHostController)
+            com.music.spotui.ui.screens.SetupScreen(navHostController)
         }
 
         composable(
@@ -245,7 +245,7 @@ fun MyNavHost(
         ) { navBackStackEntry ->
             LaunchedEffect(playerState.value) {
                 bottomBarState.value = false
-                bottomBarPlayerState.value = playerState.value != ""
+                bottomBarPlayerState.value = false
             }
             SpotiflacVerifyScreen(
                 navHostController,

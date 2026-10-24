@@ -13,7 +13,10 @@ USpot is a music player that gets to know what you love. Find songs, keep your f
 
 1. **Download USpot** using the button above and open the file to install it.
 2. **Sign in to Spotify** to bring in your music and playlists.
-3. **Pick a song and press Play.** Home gets more personal as you listen.
+3. **Choose YouTube Music or Deezer** and confirm your audio connection.
+4. **Complete SpotiFLAC verification**, then start listening. You can go Back during setup without losing completed connections.
+
+Need to reconnect? Open **Settings → Connections & setup**. USpot also checks your connections when you open the app; a temporary network problem won't erase your saved accounts.
 
 Already have USpot? Install the update over your current app. **Don't uninstall it** if you want to keep your history and settings. You can also save a backup in Settings.
 

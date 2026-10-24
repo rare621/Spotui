@@ -8,6 +8,7 @@ sealed class Routes(
     val label : String,
     val route : String
 ) {
+    object Setup : Routes(0, "Setup", "setup")
     object Home : Routes(icon = R.drawable.ic_home_filled, label = "Home", route = "home")
     object Search : Routes(icon = R.drawable.ic_search_big, label = "Search", route = "search")
     object Library : Routes(icon = R.drawable.ic_library_big, label = "Library", route = "library")

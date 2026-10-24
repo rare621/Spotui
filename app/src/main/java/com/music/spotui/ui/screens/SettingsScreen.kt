@@ -165,6 +165,9 @@ fun SettingsScreen(navController: NavController) {
         ) {
             if (shownCategory == null) {
                 SettingsProfileHeader()
+                androidx.compose.material3.TextButton(onClick = { com.music.spotui.setup.SetupProgress.restart(context); navController.navigate(com.music.spotui.ui.navigation.Routes.Setup.route) }) {
+                    Text("Connections & setup", color = AppPalette)
+                }
                 val summaries=mapOf("Advanced" to "Troubleshooting and Radio reset", "Updates" to "Check for the latest version", "Desktop & Browser" to "Listen on your computer", "Playback" to "Sound, transitions and controls", "Appearance" to if(com.music.spotui.ui.theme.AppearanceSettings.followDevice.value)"Follow device"else if(com.music.spotui.ui.theme.AppearanceSettings.effectiveDark)"Dark"else"Light", "Storage" to "Temporary cache and space use", "Smart Downloads" to "Optional offline favorites", "Data & backup" to "Export or restore your music data", "Music sources" to "Connections and audio quality", "Home" to "Personalization and history", "Account" to "Your connected services", "About" to "Credits and app information")
                 listOf(listOf("Playback","Appearance","Home"),listOf("Storage","Smart Downloads","Data & backup","Desktop & Browser"),listOf("Music sources","Account","Advanced","Updates","About")).forEachIndexed { index, group ->
                     Text(listOf("Your listening", "Your library", "App & account")[index], color = com.music.spotui.ui.theme.AppSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 4.dp))

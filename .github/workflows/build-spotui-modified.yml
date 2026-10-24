@@ -77,7 +77,7 @@ jobs:
           python3 - <<'PY'
           import os, pathlib, re
           source = pathlib.Path('app/build.gradle.kts').read_text()
-          version = re.search(r'versionName = "([^"]+)"', source).group(1)
+          version = re.search(r'versionName = (?:if \(uspotPreview\) "[^"]+" else )?"([^"]+)"', source).group(1)
           code = re.search(r'versionCode = (\d+)', source).group(1)
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write(f'USPOT_TAG=v{version}-build-{code}\nUSPOT_TITLE=USpot {version} (build {code})\n')
