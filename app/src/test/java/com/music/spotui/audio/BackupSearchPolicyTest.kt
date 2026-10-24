@@ -66,6 +66,41 @@ class BackupSearchPolicyTest {
         assertEquals("Song (Remix)",MusicTitlePolicy.clean("Song (Remix) (with Artist)"))
         assertEquals("With You",MusicTitlePolicy.clean("With You"))
     }
+    @Test fun lollipopCreditsAndExplicitUploadLabelArePresentationOnly() {
+        val song = BackupSearchPolicy.Target("Lollipop", "Lil Wayne, Static Major", 299000, true)
+        assertEquals(listOf(id), BackupSearchPolicy.candidates(response(
+            item("Lil Wayne - Lollipop ft. Static Major (Explicit) (Official Music Video)", "LilWayneVEVO", 305)), song))
+    }
+    @Test fun officialVideoCanHaveShortIntroButAlbumAudioIsPreferred() {
+        val song = BackupSearchPolicy.Target("Lollipop", "Lil Wayne, Static Major", 299000, true)
+        val audio = item("Lollipop (Official Audio)", "Lil Wayne", 299).put("id", "Zbcdef123_-")
+        val video = item("Lil Wayne - Lollipop (Official Music Video)", "LilWayneVEVO", 320)
+        assertEquals(listOf("Zbcdef123_-", id), BackupSearchPolicy.candidates(response(video, audio), song))
+        assertTrue(BackupSearchPolicy.candidates(response(video.put("duration", 350)), song).isEmpty())
+    }
+    @Test fun unofficialVideosDoNotGetWiderDurationTolerance() {
+        val song = BackupSearchPolicy.Target("Lollipop", "Lil Wayne", 299000, true)
+        val result = BackupSearchPolicy.inspect(response(item("Lil Wayne - Lollipop (Official Music Video)", "Fan Channel", 320)), song)
+        assertTrue(result.ids.isEmpty())
+        assertEquals(1, result.rejected["Duration mismatch"])
+    }
+    @Test fun rejectionReportsExplainVersionsArtistsTitlesAndEditions() {
+        val result = BackupSearchPolicy.inspect(response(
+            item("Creepin' (Remix)"), item("Creepin'", "Other Artist"),
+            item("Another Song"), item("Creepin' (Clean)"), item(duration=280)), target)
+        assertTrue(result.ids.isEmpty())
+        assertEquals(setOf("Alternate recording", "Artist mismatch", "Title mismatch", "Edition mismatch", "Duration mismatch"), result.rejected.keys)
+        assertEquals(5, result.rejected.values.sum())
+    }
+    @Test fun unbracketedFeaturedCreditsDoNotMaskWrongRecordingVersions() {
+        assertEquals("Song", MusicTitlePolicy.clean("Song ft. Guest (Official Audio)"))
+        assertTrue(BackupSearchPolicy.candidates(response(item("Creepin' ft. Guest Remix")), target).isEmpty())
+    }
+    @Test fun searchReportsMalformedDataWithoutEchoingItsContents() {
+        val result = BackupSearchPolicy.inspect("https://private.invalid?token=secret", target)
+        assertTrue(result.ids.isEmpty())
+        assertEquals(mapOf("Unreadable search response" to 1), result.rejected)
+    }
     @Test fun rejectedReturnedStreamsGetBackupUntilPlaybackRecovers() {
         RejectedStreamRecovery.failed("a",1)
         assertTrue(RejectedStreamRecovery.preferBackup("a",2));assertFalse(RejectedStreamRecovery.preferBackup("b",2))

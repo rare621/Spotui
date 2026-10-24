@@ -1,4 +1,4 @@
-# USpot build 90 verification
+# USpot build 91 verification
 
 Build 90 promotes the independently tested preview lookup into the normal app. The source and pinned resource now live in main, and the native dependency is bundled in all normal builds. Automatic fallback is always enabled; both backup-only testing and automatic-backup UI switches are removed. Existing test-mode preferences are ignored. Spotify metadata/authentication, primary audio providers, downloads, 30-second listening qualification, Radio persistence and Home personalization stay on the existing paths.
 
@@ -8,7 +8,7 @@ Diagnostics now persist bounded display title/artist labels alongside fixed stat
 
 Next queue preparation already used a two-audible-second threshold. The clock is now seeded at the player playing-state event and polled every 250 ms. Preparation still follows the actual queue, checks generation/current-next identity, cancels on skips, avoids repeat-one, backs off failures and caches only reusable audio intros. Its bounded lookup window now allows the automatic backup to finish. New log entries identify the next song being prepared. This starts lookup around two seconds; it is not a guarantee the network/source is ready in two seconds.
 
-Local normal-package assembly passed, along with 412 unit tests (392 app, 20 Spotify), with zero failures/errors/skips. Browser interaction checks passed using simulated phone/audio. New regression tests cover concurrent song-label attribution, callback capture, label redaction and exact two-second preparation timing. CI repeats build/tests and enforces the production app ID, build number, v2 signature and existing certificate before publishing. Physical upgrades, Bluetooth and all provider/device combinations still require device testing.
+Build 90 passed local assembly, 412 unit tests and simulated browser checks. Build 91 validation is recorded below. New regression tests cover concurrent song-label attribution, callback capture, label redaction and exact two-second preparation timing. CI repeats build/tests and enforces the production app ID, build number, v2 signature and existing certificate before publishing. Physical upgrades, Bluetooth and all provider/device combinations still require device testing.
 
 ## Existing cache protections retained
 
@@ -17,3 +17,13 @@ Managed reusable cache budget: 128 MiB ExoPlayer audio + 64 MiB Glide artwork + 
 No history, statistics, Radio queue/progress, Home personalization, credentials, backup preference policies or downloaded-audio locations are changed. Cleanup only considers completed direct-child FLAC files in cache/slsk and strictly named installed/stale update files in cache/updates. Old stream-cache file URLs are invalidated if their file has been evicted. No recursive blanket cache/data clear is used. Storage usage is read-only on phone and browser.
 
 The existing normal app ID and production signing key are required. The release workflow builds/tests before publishing and checks the APK certificate and version. File-system regression tests cover history/stat/download preservation, active-file protection, LRU order, symlink boundaries and installed versus pending updates. Physical device cache shrink and provider/network playback require device testing.
+
+## Build 91 matching changes
+
+Primary matching now also compares individually credited artists to the Spotify primary artist; other recording gates remain. Video title prefixes split on a spaced separator rather than any hyphen. Backup matching strips trailing feat./ft. credits and presentation edition labels after checking explicit/clean compatibility. Alternate-version checks run before cleanup.
+
+Album-length matches rank before longer videos. Only an exact title with matching artist-channel evidence and a video label gets a bounded intro/outro allowance (10 percent, at most 30 seconds). Other results retain the narrow duration gate (4 percent, 4–12 seconds). This can accept a video edit with extra intro/outro audio; it does not claim byte-identical album recordings. Wrong artists, unexpected alternate recordings, conflicting clean/explicit editions and excessive duration differences remain rejected.
+
+When five backup results contain no accepted match, a second bounded search checks up to 15; it does not reset the existing overall backup deadline or the three-extraction cap. Slower connections can still reach that deadline. Local reports count fixed rejection categories, without storing candidate URLs/titles or raw extractor output. No provider-account or physical playback test for Lollipop was performed here.
+
+Build 91 clean normal-package assembly passed. All 418 unit tests (398 app, 20 Spotify) passed with no failures, errors or skips, including featured-credit cleanup, official-video duration/ranking, unofficial duration rejection, rejection categories and malformed-response redaction. Simulated browser interactions passed. CI independently repeats checks and verifies production update identity. Physical account/network playback remains to be tested.

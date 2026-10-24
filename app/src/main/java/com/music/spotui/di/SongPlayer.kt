@@ -1084,7 +1084,7 @@ object SongPlayer {
     ): CandidateScore {
         var candidateTitle = candidate.title
         if (candidate.isVideoSong) {
-            val split = candidateTitle.split("-", limit = 2)
+            val split = candidateTitle.split(" - ", limit = 2)
             if (split.size == 2) candidateTitle = split[1].trim()
         }
 
@@ -1101,7 +1101,12 @@ object SongPlayer {
         } else {
             0.0
         }
-        val artistScore = maxOf(uploaderArtistScore, titleArtistScore)
+        // Featured artists may be omitted or reordered by YouTube. A separately credited
+        // primary artist is useful evidence without weakening the title/version gates.
+        val primaryArtistScore = candidate.artists.maxOfOrNull {
+            bigramSimilarity(it.name, expected.artist.substringBefore(','))
+        } ?: 0.0
+        val artistScore = maxOf(uploaderArtistScore, titleArtistScore, primaryArtistScore)
 
         val expectedDurationSec = expectedDurationMs / 1000.0
         val candidateDuration = candidate.duration
@@ -1300,6 +1305,18 @@ object SongPlayer {
                 .map { it.item }
             if (accepted.isEmpty()) {
                 appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it, "YouTube search result", "No accepted matches") }
+                val reasons = transferScored.groupingBy {
+                    when {
+                        hardVersionMarkers(it.unexpectedAlternates).isNotEmpty() -> "Alternate recording"
+                        it.titleScore < 0.45 -> "Title mismatch"
+                        it.artistEvidenceScore < 0.18 -> "Artist mismatch"
+                        !it.isAcceptableMatch() -> "Recording score too low"
+                        else -> "Explicit edition mismatch"
+                    }
+                }.eachCount()
+                reasons.forEach { (reason, count) ->
+                    appCtx?.let { com.music.spotui.data.preferences.PlaybackDiagnostics.record(it, "YouTube matches rejected", "$reason: $count") }
+                }
                 val best = transferScored.maxByOrNull { it.score }
                 Log.w(
                     TAG,

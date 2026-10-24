@@ -1,7 +1,7 @@
-# 🎧 Keep the music going
+# 🎧 More music, fewer interruptions
 
-- Another playback option automatically steps in when a song needs it.
-- The next song starts preparing early for smoother listening.
-- Troubleshooting reports now include song names, making problems easier to share.
+- Improved song matching, including featured artists and official uploads.
+- Playback checks more results when the first search misses a song.
+- Song reports now explain why a match was rejected.
 
-Install **USpot.apk** over your current USpot to keep your music data. 💚
+Install **USpot.apk** over your current USpot to keep your music and settings.
